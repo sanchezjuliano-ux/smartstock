@@ -76,26 +76,41 @@ export default function ShoppingListView() {
     return HISTORY_ITEMS;
   });
 
-  const isInitialMount = useRef(true);
+  // Real-time state setter wrappers
+  const handleSetInventory = (newInvOrFn: any) => {
+    setInventory((prev) => {
+      const next = typeof newInvOrFn === 'function' ? newInvOrFn(prev) : newInvOrFn;
+      saveSharedData({ inventory: next });
+      return next;
+    });
+  };
 
-  // Persistence & Real-Time Sync Effects
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    saveSharedData({ inventory, categories: customCategories, history: historyItems });
-  }, [inventory, customCategories, historyItems]);
+  const handleSetCustomCategories = (newCatOrFn: any) => {
+    setCustomCategories((prev) => {
+      const next = typeof newCatOrFn === 'function' ? newCatOrFn(prev) : newCatOrFn;
+      saveSharedData({ categories: next });
+      return next;
+    });
+  };
 
+  const handleSetHistoryItems = (newHistOrFn: any) => {
+    setHistoryItems((prev) => {
+      const next = typeof newHistOrFn === 'function' ? newHistOrFn(prev) : newHistOrFn;
+      saveSharedData({ history: next });
+      return next;
+    });
+  };
+
+  // Real-Time Cloud Firestore Sync Listener
   useEffect(() => {
     const unsub = subscribeSharedData((data) => {
-      if (data.inventory && data.inventory.length > 0) {
+      if (data.inventory !== undefined && Array.isArray(data.inventory)) {
         setInventory(data.inventory);
       }
-      if (data.categories) {
+      if (data.categories !== undefined && Array.isArray(data.categories)) {
         setCustomCategories(data.categories);
       }
-      if (data.history && data.history.length > 0) {
+      if (data.history !== undefined && Array.isArray(data.history)) {
         setHistoryItems(data.history);
       }
     });
@@ -339,12 +354,12 @@ export default function ShoppingListView() {
             <InventoryView 
               user={user}
               inventory={inventory}
-              setInventory={setInventory}
+              setInventory={handleSetInventory}
               searchQuery={searchQuery}
               showLowStockOnly={showLowStockOnly}
               setShowLowStockOnly={setShowLowStockOnly}
               customCategories={customCategories}
-              setCustomCategories={setCustomCategories}
+              setCustomCategories={handleSetCustomCategories}
               selectedCategoryFilter={selectedCategoryFilter}
               setIsModalOpen={setIsModalOpen}
               setModalMode={setModalMode}
@@ -364,20 +379,20 @@ export default function ShoppingListView() {
           ) : activeTab === 'lists' ? (
             <AutoListsView 
               inventory={inventory} 
-              setInventory={setInventory}
+              setInventory={handleSetInventory}
               historyItems={historyItems}
-              setHistoryItems={setHistoryItems}
+              setHistoryItems={handleSetHistoryItems}
               setActiveTab={setActiveTab}
               user={user}
               customCategories={customCategories}
-              setCustomCategories={setCustomCategories}
+              setCustomCategories={handleSetCustomCategories}
             />
           ) : (
             <HistoryChatView 
               historyItems={historyItems}
-              setHistoryItems={setHistoryItems}
+              setHistoryItems={handleSetHistoryItems}
               inventory={inventory}
-              setInventory={setInventory}
+              setInventory={handleSetInventory}
             />
           )}
         </div>
@@ -448,10 +463,10 @@ export default function ShoppingListView() {
         imageFile={selectedFile}
         setImageFile={setSelectedFile}
         inventory={inventory}
-        setInventory={setInventory}
+        setInventory={handleSetInventory}
         editingItem={editingItem}
         customCategories={customCategories}
-        setCustomCategories={setCustomCategories}
+        setCustomCategories={handleSetCustomCategories}
         user={user}
       />
     </div>
