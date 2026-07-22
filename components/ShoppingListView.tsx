@@ -12,9 +12,15 @@ import { saveSharedData, subscribeSharedData } from '@/lib/sync';
 import Image from 'next/image';
 import { motion } from 'motion/react';
 
+const SHARED_USER = {
+  name: 'Despensa Compartilhada',
+  role: 'admin',
+  image: 'https://picsum.photos/seed/pantry/200/200'
+};
+
 export default function ShoppingListView() {
   const [mounted, setMounted] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user] = useState<any>(SHARED_USER);
   const [activeTab, setActiveTab] = useState<'inventory' | 'history' | 'lists'>('inventory');
 
   useEffect(() => {
@@ -130,9 +136,7 @@ export default function ShoppingListView() {
     );
   }
 
-  if (!user) {
-    return <LoginView onLogin={setUser} />;
-  }
+
 
   return (
     <div className="flex h-screen bg-surface overflow-hidden">
@@ -159,32 +163,14 @@ export default function ShoppingListView() {
              Adicionar Item
            </button>
 
-           <div className="flex items-center justify-between gap-1 p-1 bg-surface-container-low border border-outline-variant/60 rounded-xl">
-             <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-3 p-1.5 hover:bg-surface-container rounded-lg flex-1 min-w-0 text-left transition-colors cursor-pointer">
-                <div className="relative h-9 w-9 rounded-full overflow-hidden border border-outline-variant flex-shrink-0 flex items-center justify-center bg-primary-container text-on-primary-container font-bold text-xs">
-                  {user?.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    user?.name ? user.name.trim().charAt(0).toUpperCase() : 'U'
-                  )}
-                </div>
-                <div className="overflow-hidden">
-                  <div className="text-xs font-semibold truncate">{user.name}</div>
-                  <div className="text-[10px] text-on-surface-variant truncate">Configurações</div>
-                </div>
-             </button>
-             <button 
-               onClick={() => {
-                 if (confirm("Deseja realmente sair da conta?")) {
-                   setUser(null);
-                 }
-               }} 
-               className="p-2 hover:bg-error/10 hover:text-error text-outline-variant rounded-lg transition-colors cursor-pointer flex items-center justify-center shrink-0"
-               title="Sair da Conta"
-             >
-               <span className="material-symbols-outlined text-[18px]">logout</span>
-             </button>
+           <div className="flex items-center gap-3 p-3 bg-surface-container-low border border-outline-variant/60 rounded-xl">
+             <div className="h-9 w-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center flex-shrink-0">
+               <span className="material-symbols-outlined text-lg">kitchen</span>
+             </div>
+             <div className="overflow-hidden">
+               <div className="text-xs font-semibold truncate">Despensa Compartilhada</div>
+               <div className="text-[10px] text-on-surface-variant truncate">Acesso Livre & Direto</div>
+             </div>
            </div>
         </div>
       </aside>
@@ -344,14 +330,10 @@ export default function ShoppingListView() {
              </>
            )}
 
-            <button onClick={() => setIsProfileOpen(true)} className="md:hidden relative h-10 w-10 rounded-full overflow-hidden border-2 border-outline-variant hover:border-primary transition-colors flex items-center justify-center bg-primary-container text-on-primary-container font-bold text-sm">
-               {user?.image ? (
-                 // eslint-disable-next-line @next/next/no-img-element
-                 <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
-               ) : (
-                 user?.name ? user.name.trim().charAt(0).toUpperCase() : 'U'
-               )}
-            </button>
+            <div className="md:hidden flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-container text-on-primary-container text-xs font-semibold">
+               <span className="material-symbols-outlined text-[16px]">kitchen</span>
+               <span>Despensa</span>
+            </div>
         </div>
       </header>
 
@@ -440,30 +422,7 @@ export default function ShoppingListView() {
         </div>
       </div>
 
-      <ProfileSettingsModal 
-        isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
-        user={user}
-        onLogout={() => {
-          setUser(null);
-          setIsProfileOpen(false);
-        }}
-        onUpdate={(updatedUser) => {
-          setUser(updatedUser);
-          if (typeof window !== 'undefined') {
-            const stored = localStorage.getItem('virtual_pantry_profiles');
-            let currentProfiles = PROFILES;
-            if (stored) {
-              try {
-                currentProfiles = JSON.parse(stored);
-              } catch (e) {}
-            }
-            // Match either by name or check if we should map
-            const updated = currentProfiles.map((p: any) => p.name === user?.name ? updatedUser : p);
-            localStorage.setItem('virtual_pantry_profiles', JSON.stringify(updated));
-          }
-        }}
-      />
+
 
       <AddItemModal 
         isOpen={isModalOpen}
