@@ -29,7 +29,7 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
 
   useEffect(() => {
     const unsub = subscribeSharedData((data) => {
-      if (data.profiles && Array.isArray(data.profiles) && data.profiles.length > 0) {
+      if (data.profiles && Array.isArray(data.profiles)) {
         setProfiles(data.profiles);
       }
     });

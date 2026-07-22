@@ -1,10 +1,5 @@
 'use client';
 
-import { db } from './firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-
-const PANTRY_DOC_ID = 'shared_pantry_data';
-
 export interface SharedData {
   profiles: any[];
   inventory: any[];
@@ -34,11 +29,12 @@ export function getInitialSharedData(): SharedData {
   };
 }
 
-let isReceivingRemoteUpdate = false;
+let lastLocalTimestamp = 0;
+let isUpdatingFromRemote = false;
 
 export async function saveSharedData(partialData: Partial<SharedData>) {
   if (typeof window === 'undefined') return;
-  if (isReceivingRemoteUpdate) return;
+  if (isUpdatingFromRemote) return;
 
   const current = getInitialSharedData();
   const updatedData: SharedData = {
@@ -61,21 +57,20 @@ export async function saveSharedData(partialData: Partial<SharedData>) {
     localStorage.setItem('virtual_pantry_categories', JSON.stringify(partialData.categories));
   }
 
+  lastLocalTimestamp = Date.now();
+
   // Notify local tabs/window
   window.dispatchEvent(new Event('pantry_data_updated'));
 
-  // Sync to Cloud Firestore in real time
+  // Sync to central cloud server API endpoint
   try {
-    const docRef = doc(db, 'pantry', PANTRY_DOC_ID);
-    await setDoc(docRef, {
-      profiles: updatedData.profiles,
-      inventory: updatedData.inventory,
-      history: updatedData.history,
-      categories: updatedData.categories,
-      lastUpdated: new Date().toISOString(),
+    await fetch('/api/pantry/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedData),
     });
-  } catch (err: any) {
-    console.error('Firestore real-time save error:', err?.message || err);
+  } catch (err) {
+    console.warn('[Sync] Server sync warning:', err);
   }
 }
 
@@ -89,59 +84,58 @@ export function subscribeSharedData(callback: (data: SharedData) => void) {
   window.addEventListener('storage', handleLocalUpdate);
   window.addEventListener('pantry_data_updated', handleLocalUpdate);
 
-  // Real-time Cloud Firestore listener for all devices
-  let unsubscribeFirestore = () => {};
-  try {
-    const docRef = doc(db, 'pantry', PANTRY_DOC_ID);
-    unsubscribeFirestore = onSnapshot(docRef, (snapshot) => {
-      // Ignore local pending writes to avoid writer loop
-      if (snapshot.metadata.hasPendingWrites) return;
+  // Poll server every 2 seconds for multi-device sync
+  let lastServerUpdatedStr = '';
 
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        if (data) {
-          isReceivingRemoteUpdate = true;
-          try {
-            if (data.profiles && Array.isArray(data.profiles)) {
-              localStorage.setItem('virtual_pantry_profiles', JSON.stringify(data.profiles));
-            }
-            if (data.inventory && Array.isArray(data.inventory)) {
-              localStorage.setItem('virtual_pantry_inventory', JSON.stringify(data.inventory));
-            }
-            if (data.history && Array.isArray(data.history)) {
-              localStorage.setItem('virtual_pantry_history', JSON.stringify(data.history));
-            }
-            if (data.categories && Array.isArray(data.categories)) {
-              localStorage.setItem('virtual_pantry_categories', JSON.stringify(data.categories));
-            }
-            callback(getInitialSharedData());
-          } finally {
-            setTimeout(() => {
-              isReceivingRemoteUpdate = false;
-            }, 100);
+  const checkRemoteSync = async () => {
+    try {
+      const res = await fetch('/api/pantry/sync', { cache: 'no-store' });
+      if (!res.ok) return;
+
+      const serverData = await res.json();
+      if (!serverData || !serverData.lastUpdated) return;
+
+      if (serverData.lastUpdated !== lastServerUpdatedStr) {
+        lastServerUpdatedStr = serverData.lastUpdated;
+
+        // Ignore if we just pushed local changes in the last 1 second
+        if (Date.now() - lastLocalTimestamp < 1000) return;
+
+        isUpdatingFromRemote = true;
+        try {
+          if (Array.isArray(serverData.profiles)) {
+            localStorage.setItem('virtual_pantry_profiles', JSON.stringify(serverData.profiles));
           }
+          if (Array.isArray(serverData.inventory)) {
+            localStorage.setItem('virtual_pantry_inventory', JSON.stringify(serverData.inventory));
+          }
+          if (Array.isArray(serverData.history)) {
+            localStorage.setItem('virtual_pantry_history', JSON.stringify(serverData.history));
+          }
+          if (Array.isArray(serverData.categories)) {
+            localStorage.setItem('virtual_pantry_categories', JSON.stringify(serverData.categories));
+          }
+          callback(getInitialSharedData());
+        } finally {
+          setTimeout(() => {
+            isUpdatingFromRemote = false;
+          }, 200);
         }
-      } else {
-        // Seed Firestore if document doesn't exist yet
-        const local = getInitialSharedData();
-        setDoc(docRef, {
-          profiles: local.profiles,
-          inventory: local.inventory,
-          history: local.history,
-          categories: local.categories,
-          lastUpdated: new Date().toISOString(),
-        }).catch(() => {});
       }
-    }, (error) => {
-      console.warn('Firestore subscription notice:', error.message);
-    });
-  } catch (e) {
-    console.warn('Firestore subscription init error:', e);
-  }
+    } catch (e) {
+      // Ignore network hiccup
+    }
+  };
+
+  // Immediate initial check
+  checkRemoteSync();
+
+  // Poll every 2 seconds
+  const intervalId = setInterval(checkRemoteSync, 2000);
 
   return () => {
     window.removeEventListener('storage', handleLocalUpdate);
     window.removeEventListener('pantry_data_updated', handleLocalUpdate);
-    unsubscribeFirestore();
+    clearInterval(intervalId);
   };
 }
