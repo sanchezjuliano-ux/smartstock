@@ -112,22 +112,10 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
   const [pendingProfileToCreate, setPendingProfileToCreate] = useState<any>(null);
 
   const handleDeleteProfile = (profileName: string) => {
-    const existingAdmins = profiles.filter((p: any) => p.role === 'admin');
-    if (existingAdmins.length > 0) {
-      const targetAdmin = existingAdmins.find((p: any) => p.name === selectedAdminForAuth) || existingAdmins[0];
-      const expectedPassword = targetAdmin?.password || '123';
-      if (deleteAdminPassword !== expectedPassword) {
-        setDeleteAdminError('Senha do Administrador incorreta!');
-        return;
-      }
-    }
-
     const updated = profiles.filter((p: any) => p.name !== profileName);
     setProfiles(updated);
     saveSharedData({ profiles: updated });
     setProfileToDelete(null);
-    setDeleteAdminPassword('');
-    setDeleteAdminError('');
   };
 
   const handleOpenEditModal = (profile: any) => {
@@ -280,40 +268,12 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
       email: newEmail,
       phone: newPhone,
       whatsapp: newWhatsapp,
-      role: newRole,
+      role: 'admin',
       image: newImagePreview || `https://picsum.photos/seed/${encodeURIComponent(newName)}/200/200`,
       password: newPassword || '123'
     };
 
-    const existingAdmins = profiles.filter((p: any) => p.role === 'admin');
-
-    if (newRole === 'admin' && existingAdmins.length > 0) {
-      setPendingProfileToCreate(newProfile);
-      setSelectedAdminForAuth(existingAdmins[0].name);
-      setAdminAuthPassword('');
-      setAdminAuthError('');
-      setIsAdminApprovalOpen(true);
-      return;
-    }
-
     saveNewProfile(newProfile);
-  };
-
-  const handleConfirmAdminApproval = (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminAuthError('');
-
-    const targetAdmin = profiles.find((p: any) => p.name === selectedAdminForAuth && p.role === 'admin');
-    const expectedPassword = targetAdmin?.password || '123';
-
-    if (adminAuthPassword !== expectedPassword) {
-      setAdminAuthError('Senha do Administrador incorreta! Permissão negada.');
-      return;
-    }
-
-    if (pendingProfileToCreate) {
-      saveNewProfile(pendingProfileToCreate);
-    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -112,22 +112,10 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
   const [pendingProfileToCreate, setPendingProfileToCreate] = useState<any>(null);
 
   const handleDeleteProfile = (profileName: string) => {
-    const existingAdmins = profiles.filter((p: any) => p.role === 'admin');
-    if (existingAdmins.length > 0) {
-      const targetAdmin = existingAdmins.find((p: any) => p.name === selectedAdminForAuth) || existingAdmins[0];
-      const expectedPassword = targetAdmin?.password || '123';
-      if (deleteAdminPassword !== expectedPassword) {
-        setDeleteAdminError('Senha do Administrador incorreta!');
-        return;
-      }
-    }
-
     const updated = profiles.filter((p: any) => p.name !== profileName);
     setProfiles(updated);
     saveSharedData({ profiles: updated });
     setProfileToDelete(null);
-    setDeleteAdminPassword('');
-    setDeleteAdminError('');
   };
 
   const handleOpenEditModal = (profile: any) => {
@@ -280,40 +268,12 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
       email: newEmail,
       phone: newPhone,
       whatsapp: newWhatsapp,
-      role: newRole,
+      role: 'admin',
       image: newImagePreview || `https://picsum.photos/seed/${encodeURIComponent(newName)}/200/200`,
       password: newPassword || '123'
     };
 
-    const existingAdmins = profiles.filter((p: any) => p.role === 'admin');
-
-    if (newRole === 'admin' && existingAdmins.length > 0) {
-      setPendingProfileToCreate(newProfile);
-      setSelectedAdminForAuth(existingAdmins[0].name);
-      setAdminAuthPassword('');
-      setAdminAuthError('');
-      setIsAdminApprovalOpen(true);
-      return;
-    }
-
     saveNewProfile(newProfile);
-  };
-
-  const handleConfirmAdminApproval = (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminAuthError('');
-
-    const targetAdmin = profiles.find((p: any) => p.name === selectedAdminForAuth && p.role === 'admin');
-    const expectedPassword = targetAdmin?.password || '123';
-
-    if (adminAuthPassword !== expectedPassword) {
-      setAdminAuthError('Senha do Administrador incorreta! Permissão negada.');
-      return;
-    }
-
-    if (pendingProfileToCreate) {
-      saveNewProfile(pendingProfileToCreate);
-    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -551,38 +511,6 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
                     placeholder="seu.email@exemplo.com"
                     className="w-full bg-surface border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary rounded-lg px-4 py-3 outline-none transition-all text-sm"
                   />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-mono font-medium text-on-surface-variant block uppercase tracking-wider">
-                    Tipo de Perfil
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setNewRole('user')}
-                      className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        newRole === 'user'
-                          ? 'bg-secondary/15 border-secondary text-secondary shadow-sm'
-                          : 'bg-surface border-outline-variant text-on-surface-variant hover:border-outline'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">person</span>
-                      Usuário Padrão
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNewRole('admin')}
-                      className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        newRole === 'admin'
-                          ? 'bg-primary/15 border-primary text-primary shadow-sm'
-                          : 'bg-surface border-outline-variant text-on-surface-variant hover:border-outline'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
-                      Administrador
-                    </button>
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1069,11 +997,7 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => {
-                setProfileToDelete(null);
-                setDeleteAdminPassword('');
-                setDeleteAdminError('');
-              }}
+              onClick={() => setProfileToDelete(null)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
             <motion.div
@@ -1088,45 +1012,13 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
               <div>
                 <h3 className="text-lg font-bold text-on-surface">Excluir Perfil?</h3>
                 <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-                  Tem certeza que deseja excluir o perfil de <strong className="text-on-surface">{profileToDelete.name}</strong>?
+                  Tem certeza que deseja excluir o perfil de <strong className="text-on-surface">{profileToDelete.name}</strong>? Esta ação não pode ser desfeita.
                 </p>
               </div>
-
-              {profiles.some((p: any) => p.role === 'admin') && (
-                <div className="text-left space-y-1">
-                  <label className="text-[11px] font-mono font-medium text-on-surface-variant block uppercase tracking-wider">
-                    Senha do Administrador
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    autoFocus
-                    value={deleteAdminPassword}
-                    onChange={(e) => {
-                      setDeleteAdminPassword(e.target.value);
-                      setDeleteAdminError('');
-                    }}
-                    placeholder="••••••••"
-                    className="w-full bg-surface border border-outline-variant focus:border-error focus:ring-1 focus:ring-error rounded-lg px-3 py-2 text-sm outline-none font-mono"
-                  />
-                </div>
-              )}
-
-              {deleteAdminError && (
-                <div className="p-2.5 bg-error/10 border border-error/20 text-error text-xs rounded-lg flex items-center gap-1.5 text-left">
-                  <span className="material-symbols-outlined text-[16px] shrink-0">error</span>
-                  <span className="font-medium">{deleteAdminError}</span>
-                </div>
-              )}
-
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setProfileToDelete(null);
-                    setDeleteAdminPassword('');
-                    setDeleteAdminError('');
-                  }}
+                  onClick={() => setProfileToDelete(null)}
                   className="flex-1 bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-mono font-bold uppercase transition-all cursor-pointer"
                 >
                   Cancelar
@@ -1139,101 +1031,6 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
                   Excluir
                 </button>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Admin Authorization Modal for New Admin Creation */}
-      <AnimatePresence>
-        {isAdminApprovalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsAdminApprovalOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-surface border border-outline-variant w-full max-w-md rounded-3xl p-6 shadow-2xl z-10 space-y-4"
-            >
-              <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                  <span className="material-symbols-outlined text-2xl">admin_panel_settings</span>
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-on-surface">Autorização de Administrador</h3>
-                  <p className="text-xs text-on-surface-variant">Aprovação necessária para novo Administrador</p>
-                </div>
-              </div>
-
-              <form onSubmit={handleConfirmAdminApproval} className="space-y-4">
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                  Para autorizar o cadastro do novo Administrador <strong className="text-on-surface">{pendingProfileToCreate?.name}</strong>, selecione o Administrador atual e insira sua senha:
-                </p>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-mono font-medium text-on-surface-variant block uppercase tracking-wider">
-                    Administrador Responsável
-                  </label>
-                  <select
-                    value={selectedAdminForAuth}
-                    onChange={(e) => setSelectedAdminForAuth(e.target.value)}
-                    className="w-full bg-surface border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary rounded-lg px-3 py-2.5 text-sm outline-none font-medium"
-                  >
-                    {profiles.filter((p: any) => p.role === 'admin').map((admin: any) => (
-                      <option key={admin.name} value={admin.name}>
-                        {admin.name} ({admin.email || 'Admin'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-mono font-medium text-on-surface-variant block uppercase tracking-wider">
-                    Senha do Administrador
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    autoFocus
-                    value={adminAuthPassword}
-                    onChange={(e) => {
-                      setAdminAuthPassword(e.target.value);
-                      setAdminAuthError('');
-                    }}
-                    placeholder="••••••••"
-                    className="w-full bg-surface border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary rounded-lg px-4 py-3 text-sm outline-none font-mono"
-                  />
-                </div>
-
-                {adminAuthError && (
-                  <div className="p-3 bg-error/10 border border-error/20 text-error text-xs rounded-xl flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] shrink-0">error</span>
-                    <span className="font-medium">{adminAuthError}</span>
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsAdminApprovalOpen(false)}
-                    className="flex-1 bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-mono font-bold uppercase transition-all cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 bg-primary hover:bg-primary/90 text-on-primary py-2.5 rounded-xl text-xs font-mono font-bold uppercase transition-all shadow-md active:scale-95 cursor-pointer"
-                  >
-                    Autorizar & Cadastrar
-                  </button>
-                </div>
-              </form>
             </motion.div>
           </div>
         )}
@@ -1321,37 +1118,7 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-mono font-medium text-on-surface-variant block uppercase tracking-wider">
-                    Tipo de Perfil
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setEditRole('user')}
-                      className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        editRole === 'user'
-                          ? 'bg-secondary/15 border-secondary text-secondary'
-                          : 'bg-surface border-outline-variant text-on-surface-variant hover:border-outline'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[16px]">person</span>
-                      Usuário Padrão
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditRole('admin')}
-                      className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        editRole === 'admin'
-                          ? 'bg-primary/15 border-primary text-primary'
-                          : 'bg-surface border-outline-variant text-on-surface-variant hover:border-outline'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                      Administrador
-                    </button>
-                  </div>
-                </div>
+
 
                 <div className="space-y-1">
                   <label className="text-xs font-mono font-medium text-on-surface-variant block uppercase tracking-wider">
