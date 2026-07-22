@@ -23,17 +23,22 @@ function ProductCard({
   if (viewMode === 'list') {
     return (
       <div className={`bg-surface-container-lowest border rounded-xl p-3 flex items-center gap-4 group hover:bg-surface-container-low transition-all relative ${isLowStock ? 'border-2 border-error-container' : 'border-outline-variant'}`}>
-        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onEdit(item)} className="p-1.5 bg-surface-container rounded-md hover:bg-secondary/10 hover:text-secondary transition-colors">
-            <span className="material-symbols-outlined text-[14px]">edit</span>
+        <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+          <button onClick={() => onEdit(item)} className="p-2 bg-surface-container-high/90 backdrop-blur-md rounded-lg text-on-surface hover:bg-secondary hover:text-on-secondary shadow-md transition-all active:scale-95 cursor-pointer" title="Editar item">
+            <span className="material-symbols-outlined text-[16px]">edit</span>
           </button>
-          <button onClick={() => onDelete(item.id)} className="p-1.5 bg-surface-container rounded-md hover:bg-error/10 hover:text-error transition-colors">
-            <span className="material-symbols-outlined text-[14px]">delete</span>
+          <button onClick={() => onDelete(item.id)} className="p-2 bg-surface-container-high/90 backdrop-blur-md rounded-lg text-error hover:bg-error hover:text-on-error shadow-md transition-all active:scale-95 cursor-pointer" title="Excluir item">
+            <span className="material-symbols-outlined text-[16px]">delete</span>
           </button>
         </div>
         
-        <div className="relative h-16 w-16 bg-surface-container rounded-lg overflow-hidden flex-shrink-0">
-          <Image src={item.image} alt={item.name} fill className="object-cover" referrerPolicy="no-referrer" />
+        <div className="relative h-16 w-16 bg-surface-container rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+          {item.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+          ) : (
+            <span className="material-symbols-outlined text-on-surface-variant text-2xl">kitchen</span>
+          )}
         </div>
         <div className="flex-grow min-w-0 pr-16">
           <div className="flex items-center gap-2 mb-1">
@@ -70,18 +75,23 @@ function ProductCard({
 
   return (
     <div className={`bg-surface-container-lowest border rounded-xl p-4 flex flex-col gap-3 group hover:bg-surface-container-low transition-all relative ${isLowStock ? 'border-2 border-error-container' : 'border-outline-variant'}`}>
-      <div className="absolute top-2 left-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={() => onEdit(item)} className="p-1.5 bg-surface-container/80 backdrop-blur-sm rounded-md hover:bg-secondary/10 hover:text-secondary transition-colors">
+      <div className="absolute top-2 left-2 z-10 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <button onClick={() => onEdit(item)} className="p-2 bg-surface-container-high/90 backdrop-blur-md rounded-lg text-on-surface hover:bg-secondary hover:text-on-secondary shadow-md transition-all active:scale-95 cursor-pointer" title="Editar item">
           <span className="material-symbols-outlined text-[16px]">edit</span>
         </button>
-        <button onClick={() => onDelete(item.id)} className="p-1.5 bg-surface-container/80 backdrop-blur-sm rounded-md hover:bg-error/10 hover:text-error transition-colors">
+        <button onClick={() => onDelete(item.id)} className="p-2 bg-surface-container-high/90 backdrop-blur-md rounded-lg text-error hover:bg-error hover:text-on-error shadow-md transition-all active:scale-95 cursor-pointer" title="Excluir item">
           <span className="material-symbols-outlined text-[16px]">delete</span>
         </button>
       </div>
 
       <div className="relative h-40 w-full bg-surface-container rounded-lg overflow-hidden flex items-center justify-center">
-        <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-105 transition-transform" referrerPolicy="no-referrer" />
-        <span className={`absolute top-2 right-2 px-2 py-1 text-[10px] font-bold rounded uppercase ${isLowStock ? 'bg-error/10 text-error' : 'bg-secondary/10 text-secondary'}`}>
+        {item.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+        ) : (
+          <span className="material-symbols-outlined text-on-surface-variant text-4xl">kitchen</span>
+        )}
+        <span className={`absolute top-2 right-2 px-2 py-1 text-[10px] font-bold rounded uppercase shadow-sm ${isLowStock ? 'bg-error/90 text-on-error' : 'bg-secondary/90 text-on-secondary'}`}>
           {item.status}
         </span>
       </div>

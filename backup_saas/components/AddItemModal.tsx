@@ -120,22 +120,18 @@ export default function AddItemModal({
   };
 
   const capturePhoto = () => {
-    if (videoRef.current && setImageFile && setMode) {
+    if (videoRef.current && setMode) {
       const video = videoRef.current;
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
+      canvas.width = 400;
+      canvas.height = 400;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], `camera_capture_${cameraMode}.jpg`, { type: "image/jpeg" });
-            setImageFile(file);
-            setMode(cameraMode || 'photo');
-            stopCamera();
-          }
-        }, 'image/jpeg', 0.85);
+        ctx.drawImage(video, 0, 0, 400, 400);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setImagePreview(dataUrl);
+        setMode(cameraMode || 'photo');
+        stopCamera();
       }
     }
   };
@@ -160,8 +156,28 @@ export default function AddItemModal({
   }, [cameraStream]);
 
   const handleLocalFileChange = (e: React.ChangeEvent<HTMLInputElement>, selectedMode: 'barcode' | 'photo') => {
-    if (e.target.files && e.target.files[0] && setImageFile && setMode) {
-      setImageFile(e.target.files[0]);
+    if (e.target.files && e.target.files[0] && setMode) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const raw = reader.result as string;
+        const img = new document.defaultView!.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 400;
+          canvas.height = 400;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, 400, 400);
+            setImagePreview(canvas.toDataURL('image/jpeg', 0.85));
+          } else {
+            setImagePreview(raw);
+          }
+        };
+        img.onerror = () => setImagePreview(raw);
+        img.src = raw;
+      };
+      reader.readAsDataURL(file);
       setMode(selectedMode);
       e.target.value = '';
     }
@@ -228,12 +244,27 @@ export default function AddItemModal({
 
   useEffect(() => {
     if (isOpen && imageFile && !editingItem) {
-      const url = URL.createObjectURL(imageFile);
-      
-      const setupTimer = setTimeout(() => {
-        setImagePreview(url);
-        setIsProcessing(true);
-      }, 0);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const raw = reader.result as string;
+        const img = new document.defaultView!.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 400;
+          canvas.height = 400;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, 400, 400);
+            setImagePreview(canvas.toDataURL('image/jpeg', 0.85));
+          } else {
+            setImagePreview(raw);
+          }
+        };
+        img.onerror = () => setImagePreview(raw);
+        img.src = raw;
+      };
+      reader.readAsDataURL(imageFile);
+      setIsProcessing(true);
       
       // Simulate AI processing / barcode reading
       const timer = setTimeout(() => {
@@ -432,7 +463,8 @@ export default function AddItemModal({
               </div>
             ) : (
               <div className="mb-6 rounded-xl overflow-hidden border border-outline-variant relative h-48 bg-surface-container flex items-center justify-center">
-                <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                 {isProcessing && (
                   <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white">
                     <span className="material-symbols-outlined animate-spin mb-2">sync</span>
@@ -556,12 +588,18 @@ export default function AddItemModal({
                   </label>
                   <input
                     type="text"
+                    list="subcategories-datalist"
                     placeholder="Ex: Laticínios, Enlatados..."
                     value={formData.subcategory || ''}
                     onChange={(e) => setFormData({...formData, subcategory: e.target.value})}
                     disabled={isProcessing}
                     className="w-full bg-surface border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary rounded-lg px-4 py-3 outline-none transition-all text-sm disabled:opacity-50"
                   />
+                  <datalist id="subcategories-datalist">
+                    {Array.from(new Set((inventory || []).map((i: any) => i.subcategory).filter(Boolean))).map((sub: any) => (
+                      <option key={sub} value={sub} />
+                    ))}
+                  </datalist>
                 </div>
                 
                 <div className="space-y-1">
@@ -626,81 +664,80 @@ export default function AddItemModal({
             </form>
           </div>
           <div className="p-6 border-t border-outline-variant bg-surface-container-lowest">
-             <button
-                type="button"
-                onClick={() => {
-                  if (user && user.planStatus !== 'active' && user.planStatus !== 'trialling') {
-                    alert("Ação Bloqueada! Ative a sua assinatura do SaaS para poder salvar alterações.");
-                    return;
-                  }
-                  alert("Email de aviso enviado ao administrador sobre a alteração/cadastro do produto.");
-                  if (inventory && setInventory) {
-                    if (editingItem) {
-                      setInventory(inventory.map(item => {
-                        if (item.id === editingItem.id) {
-                          const newStock = parseInt(formData.stock) || 0;
-                          const newStatus = newStock <= item.minStock ? (newStock === 0 ? 'ESGOTADO' : 'ESTOQUE BAIXO') : 'EM ESTOQUE';
-                          const updateInfo = (newStock === 0 && item.stock !== 0)
-                            ? {
-                                zeroedBy: user?.name || 'Maria',
-                                zeroedByInitials: (user?.name || 'Maria').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
-                                zeroedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                              }
-                            : {};
-                          return {
-                            ...item,
-                            name: formData.name,
-                            brand: formData.brand,
-                            category: formData.category,
-                            subcategory: formData.subcategory,
-                            price: parseFloat(formData.price) || 0,
-                            validity: formData.validity,
-                            stock: newStock,
-                            status: newStatus,
-                            ...updateInfo
-                          };
-                        }
-                        return item;
-                      }));
-                    } else {
-                      const newId = Math.max(...inventory.map((i: any) => i.id), 0) + 1;
-                      const newStock = parseInt(formData.stock) !== undefined ? (parseInt(formData.stock) || 0) : 1;
-                      const minStock = 1;
-                      const newStatus = newStock <= minStock ? (newStock === 0 ? 'ESGOTADO' : 'ESTOQUE BAIXO') : 'EM ESTOQUE';
-                      const updateInfo = (newStock === 0)
-                        ? {
-                            zeroedBy: user?.name || 'Maria',
-                            zeroedByInitials: (user?.name || 'Maria').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
-                            zeroedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                          }
-                        : {};
-                      setInventory([...inventory, {
-                        id: newId,
-                        name: formData.name || 'Novo Item',
-                        brand: formData.brand || '-',
-                        category: formData.category || 'Despensa',
-                        subcategory: formData.subcategory || '',
-                        price: parseFloat(formData.price) || 0,
-                        validity: formData.validity || '-',
-                        stock: newStock,
-                        minStock: minStock,
-                        status: newStatus,
-                        image: imagePreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200&h=200',
-                        ...updateInfo
-                      }]);
+            <button
+              type="button"
+              onClick={() => {
+                if (inventory && setInventory) {
+                  const selectedCat = formData.category?.trim() || 'Despensa';
+                  if (selectedCat && !['Despensa', 'Limpeza', 'Higiene'].includes(selectedCat)) {
+                    if (setCustomCategories && !customCategories.includes(selectedCat)) {
+                      setCustomCategories((prev: string[]) => [...prev, selectedCat]);
                     }
                   }
-                  handleClose();
-                }}
-                disabled={isProcessing || (user && user.planStatus !== 'active' && user.planStatus !== 'trialling')}
-                className={`w-full py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-50 ${
-                  user && user.planStatus !== 'active' && user.planStatus !== 'trialling'
-                    ? 'bg-error text-on-error cursor-not-allowed hover:bg-error/90'
-                    : 'bg-secondary text-on-secondary hover:opacity-90 active:scale-[0.98]'
-                }`}
-             >
-                {user && user.planStatus !== 'active' && user.planStatus !== 'trialling' ? 'Salvar Bloqueado (Assinatura Inativa)' : 'Salvar Item'}
-             </button>
+
+                  if (editingItem) {
+                    setInventory(inventory.map(item => {
+                      if (item.id === editingItem.id) {
+                        const newStock = parseInt(formData.stock) || 0;
+                        const newStatus = newStock <= item.minStock ? (newStock === 0 ? 'ESGOTADO' : 'ESTOQUE BAIXO') : 'EM ESTOQUE';
+                        const updateInfo = (newStock === 0 && item.stock !== 0)
+                          ? {
+                              zeroedBy: user?.name || 'Maria',
+                              zeroedByInitials: (user?.name || 'Maria').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+                              zeroedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                            }
+                          : {};
+                        return {
+                          ...item,
+                          name: formData.name,
+                          brand: formData.brand,
+                          category: formData.category,
+                          subcategory: formData.subcategory,
+                          price: parseFloat(formData.price) || 0,
+                          validity: formData.validity,
+                          stock: newStock,
+                          status: newStatus,
+                          image: imagePreview || item.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200&h=200',
+                          ...updateInfo
+                        };
+                      }
+                      return item;
+                    }));
+                  } else {
+                    const newId = Math.max(...inventory.map((i: any) => i.id), 0) + 1;
+                    const newStock = parseInt(formData.stock) !== undefined ? (parseInt(formData.stock) || 0) : 1;
+                    const minStock = 1;
+                    const newStatus = newStock <= minStock ? (newStock === 0 ? 'ESGOTADO' : 'ESTOQUE BAIXO') : 'EM ESTOQUE';
+                    const updateInfo = (newStock === 0)
+                      ? {
+                          zeroedBy: user?.name || 'Maria',
+                          zeroedByInitials: (user?.name || 'Maria').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+                          zeroedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        }
+                      : {};
+                    setInventory([...inventory, {
+                      id: newId,
+                      name: formData.name || 'Novo Item',
+                      brand: formData.brand || '-',
+                      category: formData.category || 'Despensa',
+                      subcategory: formData.subcategory || '',
+                      price: parseFloat(formData.price) || 0,
+                      validity: formData.validity || '-',
+                      stock: newStock,
+                      minStock: minStock,
+                      status: newStatus,
+                      image: imagePreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200&h=200',
+                      ...updateInfo
+                    }]);
+                  }
+                }
+                handleClose();
+              }}
+              disabled={isProcessing}
+              className="w-full py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-50 bg-secondary text-on-secondary hover:opacity-90 active:scale-[0.98] cursor-pointer"
+            >
+              Salvar Item
+            </button>
           </div>
         </motion.div>
       </div>
