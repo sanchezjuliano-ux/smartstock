@@ -88,6 +88,17 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
 
   const [isAdminOverride, setIsAdminOverride] = useState(false);
 
+  const [profileToDelete, setProfileToDelete] = useState<any>(null);
+
+  const handleDeleteProfile = (profileName: string) => {
+    const updated = profiles.filter((p: any) => p.name !== profileName);
+    setProfiles(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('virtual_pantry_profiles', JSON.stringify(updated));
+    }
+    setProfileToDelete(null);
+  };
+
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -541,28 +552,45 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
           <div className="p-8 md:p-12 animate-in fade-in zoom-in duration-300">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
               {profiles.map((profile) => (
-                <button
+                <div
                   key={profile.name}
-                  className="group flex flex-col items-center gap-4 transition-all duration-300 outline-none"
-                  onClick={() => {
-                    setSelectedProfile(profile);
-                    setIsAdminOverride(profile.role === 'admin');
-                  }}
+                  className="group relative flex flex-col items-center gap-4 transition-all duration-300 outline-none"
                 >
-                  <div className="relative">
-                    <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-2 border-outline-variant group-hover:border-secondary transition-all p-1 group-hover:scale-105">
-                      <div className="w-full h-full rounded-full overflow-hidden bg-surface-container-high relative flex items-center justify-center">
-                        {renderAvatar(profile.image, profile.name)}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProfileToDelete(profile);
+                    }}
+                    className="absolute -top-1 -right-1 z-20 w-8 h-8 rounded-full bg-error/10 hover:bg-error text-error hover:text-on-error border border-error/20 flex items-center justify-center transition-all duration-200 shadow-sm opacity-80 hover:opacity-100 group-hover:scale-110 cursor-pointer"
+                    title={`Excluir perfil de ${profile.name}`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProfile(profile);
+                      setIsAdminOverride(profile.role === 'admin');
+                    }}
+                    className="flex flex-col items-center gap-4 cursor-pointer outline-none w-full"
+                  >
+                    <div className="relative">
+                      <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-2 border-outline-variant group-hover:border-secondary transition-all p-1 group-hover:scale-105">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-surface-container-high relative flex items-center justify-center">
+                          {renderAvatar(profile.image, profile.name)}
+                        </div>
                       </div>
+                      {profile.role === 'admin' && (
+                        <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-secondary text-on-secondary text-[10px] font-mono px-2 py-0.5 rounded-full uppercase tracking-widest whitespace-nowrap">
+                          Administrador
+                        </span>
+                      )}
                     </div>
-                    {profile.role === 'admin' && (
-                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-secondary text-on-secondary text-[10px] font-mono px-2 py-0.5 rounded-full uppercase tracking-widest whitespace-nowrap">
-                        Administrador
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xl font-semibold group-hover:text-secondary transition-colors">{profile.name}</span>
-                </button>
+                    <span className="text-xl font-semibold group-hover:text-secondary transition-colors">{profile.name}</span>
+                  </button>
+                </div>
               ))}
             </div>
             <div className="mt-12 pt-8 border-t border-outline-variant flex justify-center">
@@ -926,6 +954,53 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
                     </button>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmation Modal for Profile Deletion */}
+      <AnimatePresence>
+        {profileToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setProfileToDelete(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-surface border border-outline-variant w-full max-w-sm rounded-3xl p-6 shadow-2xl z-10 text-center space-y-4"
+            >
+              <div className="w-14 h-14 bg-error/10 text-error rounded-full flex items-center justify-center mx-auto">
+                <span className="material-symbols-outlined text-3xl">delete_forever</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-on-surface">Excluir Perfil?</h3>
+                <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                  Tem certeza que deseja excluir o perfil de <strong className="text-on-surface">{profileToDelete.name}</strong>? Esta ação não pode ser desfeita.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setProfileToDelete(null)}
+                  className="flex-1 bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-mono font-bold uppercase transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteProfile(profileToDelete.name)}
+                  className="flex-1 bg-error hover:bg-error/90 text-on-error py-2.5 rounded-xl text-xs font-mono font-bold uppercase transition-all shadow-md active:scale-95 cursor-pointer"
+                >
+                  Excluir
+                </button>
               </div>
             </motion.div>
           </div>
