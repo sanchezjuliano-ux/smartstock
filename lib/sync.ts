@@ -1,7 +1,7 @@
 'use client';
 
 import { db } from './firebase';
-import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const PANTRY_DOC_ID = 'shared_pantry_data';
 
@@ -88,6 +88,9 @@ export function subscribeSharedData(callback: (data: SharedData) => void) {
   try {
     const docRef = doc(db, 'pantry', PANTRY_DOC_ID);
     unsubscribeFirestore = onSnapshot(docRef, (snapshot) => {
+      // Ignore local pending writes to prevent loop race condition
+      if (snapshot.metadata.hasPendingWrites) return;
+
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data) {

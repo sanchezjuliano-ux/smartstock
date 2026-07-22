@@ -28,12 +28,8 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
   });
 
   useEffect(() => {
-    saveSharedData({ profiles });
-  }, [profiles]);
-
-  useEffect(() => {
     const unsub = subscribeSharedData((data) => {
-      if (data.profiles && data.profiles.length > 0) {
+      if (data.profiles && Array.isArray(data.profiles) && data.profiles.length > 0) {
         setProfiles(data.profiles);
       }
     });

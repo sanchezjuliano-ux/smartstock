@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import LoginView from '@/components/LoginView';
 import InventoryView from '@/components/InventoryView';
 import AutoListsView from '@/components/AutoListsView';
@@ -76,18 +76,16 @@ export default function ShoppingListView() {
     return HISTORY_ITEMS;
   });
 
+  const isInitialMount = useRef(true);
+
   // Persistence & Real-Time Sync Effects
   useEffect(() => {
-    saveSharedData({ inventory });
-  }, [inventory]);
-
-  useEffect(() => {
-    saveSharedData({ categories: customCategories });
-  }, [customCategories]);
-
-  useEffect(() => {
-    saveSharedData({ history: historyItems });
-  }, [historyItems]);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    saveSharedData({ inventory, categories: customCategories, history: historyItems });
+  }, [inventory, customCategories, historyItems]);
 
   useEffect(() => {
     const unsub = subscribeSharedData((data) => {
