@@ -36,14 +36,6 @@ export async function saveSharedData(partialData: Partial<SharedData>) {
   if (typeof window === 'undefined') return;
   if (isUpdatingFromRemote) return;
 
-  const current = getInitialSharedData();
-  const updatedData: SharedData = {
-    profiles: partialData.profiles !== undefined ? partialData.profiles : current.profiles,
-    inventory: partialData.inventory !== undefined ? partialData.inventory : current.inventory,
-    history: partialData.history !== undefined ? partialData.history : current.history,
-    categories: partialData.categories !== undefined ? partialData.categories : current.categories,
-  };
-
   if (partialData.profiles !== undefined) {
     localStorage.setItem('virtual_pantry_profiles', JSON.stringify(partialData.profiles));
   }
@@ -62,12 +54,12 @@ export async function saveSharedData(partialData: Partial<SharedData>) {
   // Notify local tabs/window
   window.dispatchEvent(new Event('pantry_data_updated'));
 
-  // Sync to central cloud server API endpoint
+  // Sync ONLY partialData to central cloud server API endpoint
   try {
     await fetch('/api/pantry/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedData),
+      body: JSON.stringify(partialData),
     });
   } catch (err) {
     console.warn('[Sync] Server sync warning:', err);
@@ -84,7 +76,7 @@ export function subscribeSharedData(callback: (data: SharedData) => void) {
   window.addEventListener('storage', handleLocalUpdate);
   window.addEventListener('pantry_data_updated', handleLocalUpdate);
 
-  // Poll server every 2 seconds for multi-device sync
+  // Poll server every 1.5 seconds for multi-device instant sync
   let lastServerUpdatedStr = '';
 
   const checkRemoteSync = async () => {
@@ -98,8 +90,8 @@ export function subscribeSharedData(callback: (data: SharedData) => void) {
       if (serverData.lastUpdated !== lastServerUpdatedStr) {
         lastServerUpdatedStr = serverData.lastUpdated;
 
-        // Ignore if we just pushed local changes in the last 1 second
-        if (Date.now() - lastLocalTimestamp < 1000) return;
+        // Ignore if local changes were made in the last 800ms
+        if (Date.now() - lastLocalTimestamp < 800) return;
 
         isUpdatingFromRemote = true;
         try {
@@ -119,7 +111,7 @@ export function subscribeSharedData(callback: (data: SharedData) => void) {
         } finally {
           setTimeout(() => {
             isUpdatingFromRemote = false;
-          }, 200);
+          }, 150);
         }
       }
     } catch (e) {
@@ -130,8 +122,8 @@ export function subscribeSharedData(callback: (data: SharedData) => void) {
   // Immediate initial check
   checkRemoteSync();
 
-  // Poll every 2 seconds
-  const intervalId = setInterval(checkRemoteSync, 2000);
+  // Poll every 1.5s
+  const intervalId = setInterval(checkRemoteSync, 1500);
 
   return () => {
     window.removeEventListener('storage', handleLocalUpdate);

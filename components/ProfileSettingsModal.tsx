@@ -74,18 +74,14 @@ export default function ProfileSettingsModal({ isOpen, onClose, user, onUpdate, 
     if (videoRef.current) {
       const video = videoRef.current;
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 320;
-      canvas.height = video.videoHeight || 320;
+      canvas.width = 250;
+      canvas.height = 250;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const url = URL.createObjectURL(blob);
-            setImagePreview(url);
-            stopCamera();
-          }
-        }, 'image/jpeg', 0.85);
+        ctx.drawImage(video, 0, 0, 250, 250);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setImagePreview(dataUrl);
+        stopCamera();
       }
     }
   };
@@ -109,8 +105,26 @@ export default function ProfileSettingsModal({ isOpen, onClose, user, onUpdate, 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const url = URL.createObjectURL(file);
-      setImagePreview(url);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const raw = reader.result as string;
+        const img = new document.defaultView!.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 250;
+          canvas.height = 250;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, 250, 250);
+            setImagePreview(canvas.toDataURL('image/jpeg', 0.8));
+          } else {
+            setImagePreview(raw);
+          }
+        };
+        img.onerror = () => setImagePreview(raw);
+        img.src = raw;
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -175,7 +189,8 @@ export default function ProfileSettingsModal({ isOpen, onClose, user, onUpdate, 
                 >
                   {imagePreview ? (
                     <>
-                      <Image src={imagePreview} alt="Preview" fill className="object-cover" referrerPolicy="no-referrer" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover rounded-full" />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <span className="material-symbols-outlined text-white">edit</span>
                       </div>

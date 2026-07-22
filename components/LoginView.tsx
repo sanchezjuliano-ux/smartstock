@@ -44,7 +44,7 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   const renderAvatar = (imageUrl: string, name: string, sizeClass: string = "w-full h-full") => {
-    const hasError = imageErrors[imageUrl] || !imageUrl || imageUrl.startsWith('blob:');
+    const hasError = imageErrors[imageUrl] || !imageUrl;
     
     if (hasError) {
       const colors = [
@@ -67,12 +67,11 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
     }
 
     return (
-      <Image 
+      // eslint-disable-next-line @next/next/no-img-element
+      <img 
         src={imageUrl} 
         alt={name} 
-        fill 
-        className="object-cover" 
-        referrerPolicy="no-referrer" 
+        className={`w-full h-full object-cover rounded-full ${sizeClass}`}
         onError={() => {
           setImageErrors(prev => ({ ...prev, [imageUrl]: true }));
         }}

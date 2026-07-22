@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-// Server-side shared storage in memory & disk file fallback
 interface SharedPantryData {
   profiles: any[];
   inventory: any[];
@@ -27,7 +26,13 @@ function loadFromFile(): SharedPantryData {
       const raw = fs.readFileSync(FILE_PATH, 'utf8');
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
-        return parsed;
+        return {
+          profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [],
+          inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
+          history: Array.isArray(parsed.history) ? parsed.history : [],
+          categories: Array.isArray(parsed.categories) ? parsed.categories : [],
+          lastUpdated: parsed.lastUpdated || new Date().toISOString(),
+        };
       }
     }
   } catch (e) {
@@ -64,10 +69,10 @@ export async function POST(req: NextRequest) {
     const current = loadFromFile();
 
     const updatedData: SharedPantryData = {
-      profiles: Array.isArray(body.profiles) ? body.profiles : current.profiles,
-      inventory: Array.isArray(body.inventory) ? body.inventory : current.inventory,
-      history: Array.isArray(body.history) ? body.history : current.history,
-      categories: Array.isArray(body.categories) ? body.categories : current.categories,
+      profiles: body.profiles !== undefined && Array.isArray(body.profiles) ? body.profiles : current.profiles,
+      inventory: body.inventory !== undefined && Array.isArray(body.inventory) ? body.inventory : current.inventory,
+      history: body.history !== undefined && Array.isArray(body.history) ? body.history : current.history,
+      categories: body.categories !== undefined && Array.isArray(body.categories) ? body.categories : current.categories,
       lastUpdated: new Date().toISOString(),
     };
 

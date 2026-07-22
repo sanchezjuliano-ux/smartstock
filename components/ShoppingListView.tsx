@@ -161,8 +161,13 @@ export default function ShoppingListView() {
 
            <div className="flex items-center justify-between gap-1 p-1 bg-surface-container-low border border-outline-variant/60 rounded-xl">
              <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-3 p-1.5 hover:bg-surface-container rounded-lg flex-1 min-w-0 text-left transition-colors cursor-pointer">
-                <div className="relative h-9 w-9 rounded-full overflow-hidden border border-outline-variant flex-shrink-0">
-                  <Image src={user.image} alt={user.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                <div className="relative h-9 w-9 rounded-full overflow-hidden border border-outline-variant flex-shrink-0 flex items-center justify-center bg-primary-container text-on-primary-container font-bold text-xs">
+                  {user?.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    user?.name ? user.name.trim().charAt(0).toUpperCase() : 'U'
+                  )}
                 </div>
                 <div className="overflow-hidden">
                   <div className="text-xs font-semibold truncate">{user.name}</div>
@@ -339,9 +344,14 @@ export default function ShoppingListView() {
              </>
            )}
 
-           <button onClick={() => setIsProfileOpen(true)} className="md:hidden relative h-10 w-10 rounded-full overflow-hidden border-2 border-outline-variant hover:border-primary transition-colors">
-              <Image src={user.image} alt={user.name} fill className="object-cover" referrerPolicy="no-referrer" />
-           </button>
+            <button onClick={() => setIsProfileOpen(true)} className="md:hidden relative h-10 w-10 rounded-full overflow-hidden border-2 border-outline-variant hover:border-primary transition-colors flex items-center justify-center bg-primary-container text-on-primary-container font-bold text-sm">
+               {user?.image ? (
+                 // eslint-disable-next-line @next/next/no-img-element
+                 <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
+               ) : (
+                 user?.name ? user.name.trim().charAt(0).toUpperCase() : 'U'
+               )}
+            </button>
         </div>
       </header>
 
