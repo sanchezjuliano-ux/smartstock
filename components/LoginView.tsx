@@ -128,9 +128,7 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
 
     const updated = profiles.filter((p: any) => p.name !== profileName);
     setProfiles(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('virtual_pantry_profiles', JSON.stringify(updated));
-    }
+    saveSharedData({ profiles: updated });
     setProfileToDelete(null);
     setDeleteAdminPassword('');
     setDeleteAdminError('');
@@ -168,9 +166,7 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
     });
 
     setProfiles(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('virtual_pantry_profiles', JSON.stringify(updated));
-    }
+    saveSharedData({ profiles: updated });
     setProfileToEdit(null);
   };
 
@@ -266,9 +262,7 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
   const saveNewProfile = (newProfile: any) => {
     const updated = [...profiles, newProfile];
     setProfiles(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('virtual_pantry_profiles', JSON.stringify(updated));
-    }
+    saveSharedData({ profiles: updated });
     setIsCreatingProfile(false);
     setPendingProfileToCreate(null);
     setIsAdminApprovalOpen(false);

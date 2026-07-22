@@ -1,7 +1,7 @@
 'use client';
 
 import { db } from './firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 
 const PANTRY_DOC_ID = 'shared_pantry_data';
 
@@ -34,8 +34,16 @@ export function getInitialSharedData(): SharedData {
   };
 }
 
-export function saveSharedData(partialData: Partial<SharedData>) {
+export async function saveSharedData(partialData: Partial<SharedData>) {
   if (typeof window === 'undefined') return;
+
+  const current = getInitialSharedData();
+  const updatedData: SharedData = {
+    profiles: partialData.profiles !== undefined ? partialData.profiles : current.profiles,
+    inventory: partialData.inventory !== undefined ? partialData.inventory : current.inventory,
+    history: partialData.history !== undefined ? partialData.history : current.history,
+    categories: partialData.categories !== undefined ? partialData.categories : current.categories,
+  };
 
   if (partialData.profiles !== undefined) {
     localStorage.setItem('virtual_pantry_profiles', JSON.stringify(partialData.profiles));
@@ -50,21 +58,18 @@ export function saveSharedData(partialData: Partial<SharedData>) {
     localStorage.setItem('virtual_pantry_categories', JSON.stringify(partialData.categories));
   }
 
-  // Notify other tabs and components in same window
+  // Notify current browser window / other tabs
   window.dispatchEvent(new Event('pantry_data_updated'));
 
-  // Sync to Firebase Firestore asynchronously
+  // Sync to Cloud Firestore
   try {
-    const currentAll = getInitialSharedData();
     const docRef = doc(db, 'pantry', PANTRY_DOC_ID);
-    setDoc(docRef, {
-      ...currentAll,
+    await setDoc(docRef, {
+      ...updatedData,
       lastUpdated: new Date().toISOString(),
-    }, { merge: true }).catch((err) => {
-      console.warn('Firestore sync warning:', err.message);
-    });
-  } catch (err) {
-    console.warn('Firestore save skipped:', err);
+    }, { merge: true });
+  } catch (err: any) {
+    console.warn('Firestore save warning:', err?.message || err);
   }
 }
 
@@ -78,7 +83,7 @@ export function subscribeSharedData(callback: (data: SharedData) => void) {
   window.addEventListener('storage', handleLocalUpdate);
   window.addEventListener('pantry_data_updated', handleLocalUpdate);
 
-  // Subscribe to real-time Firebase Firestore updates
+  // Subscribe to real-time Cloud Firestore updates
   let unsubscribeFirestore = () => {};
   try {
     const docRef = doc(db, 'pantry', PANTRY_DOC_ID);
@@ -86,26 +91,39 @@ export function subscribeSharedData(callback: (data: SharedData) => void) {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data) {
-          if (data.profiles && Array.isArray(data.profiles)) {
+          let updated = false;
+          if (data.profiles && Array.isArray(data.profiles) && data.profiles.length > 0) {
             localStorage.setItem('virtual_pantry_profiles', JSON.stringify(data.profiles));
+            updated = true;
           }
-          if (data.inventory && Array.isArray(data.inventory)) {
+          if (data.inventory && Array.isArray(data.inventory) && data.inventory.length > 0) {
             localStorage.setItem('virtual_pantry_inventory', JSON.stringify(data.inventory));
+            updated = true;
           }
-          if (data.history && Array.isArray(data.history)) {
+          if (data.history && Array.isArray(data.history) && data.history.length > 0) {
             localStorage.setItem('virtual_pantry_history', JSON.stringify(data.history));
+            updated = true;
           }
           if (data.categories && Array.isArray(data.categories)) {
             localStorage.setItem('virtual_pantry_categories', JSON.stringify(data.categories));
+            updated = true;
           }
-          callback(getInitialSharedData());
+          if (updated) {
+            callback(getInitialSharedData());
+          }
+        }
+      } else {
+        // Seed Firestore if document doesn't exist yet
+        const local = getInitialSharedData();
+        if (local.profiles.length > 0) {
+          setDoc(docRef, { ...local, lastUpdated: new Date().toISOString() }, { merge: true }).catch(() => {});
         }
       }
     }, (error) => {
       console.warn('Firestore subscription notice:', error.message);
     });
   } catch (e) {
-    console.warn('Firestore subscription init skipped:', e);
+    console.warn('Firestore subscription init error:', e);
   }
 
   return () => {
