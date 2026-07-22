@@ -95,19 +95,39 @@ export function subscribeSharedData(callback: (data: SharedData) => void) {
 
         isUpdatingFromRemote = true;
         try {
+          let hasDiff = false;
           if (Array.isArray(serverData.profiles)) {
-            localStorage.setItem('virtual_pantry_profiles', JSON.stringify(serverData.profiles));
+            const str = JSON.stringify(serverData.profiles);
+            if (localStorage.getItem('virtual_pantry_profiles') !== str) {
+              localStorage.setItem('virtual_pantry_profiles', str);
+              hasDiff = true;
+            }
           }
           if (Array.isArray(serverData.inventory)) {
-            localStorage.setItem('virtual_pantry_inventory', JSON.stringify(serverData.inventory));
+            const str = JSON.stringify(serverData.inventory);
+            if (localStorage.getItem('virtual_pantry_inventory') !== str) {
+              localStorage.setItem('virtual_pantry_inventory', str);
+              hasDiff = true;
+            }
           }
           if (Array.isArray(serverData.history)) {
-            localStorage.setItem('virtual_pantry_history', JSON.stringify(serverData.history));
+            const str = JSON.stringify(serverData.history);
+            if (localStorage.getItem('virtual_pantry_history') !== str) {
+              localStorage.setItem('virtual_pantry_history', str);
+              hasDiff = true;
+            }
           }
           if (Array.isArray(serverData.categories)) {
-            localStorage.setItem('virtual_pantry_categories', JSON.stringify(serverData.categories));
+            const str = JSON.stringify(serverData.categories);
+            if (localStorage.getItem('virtual_pantry_categories') !== str) {
+              localStorage.setItem('virtual_pantry_categories', str);
+              hasDiff = true;
+            }
           }
-          callback(getInitialSharedData());
+
+          if (hasDiff) {
+            callback(getInitialSharedData());
+          }
         } finally {
           setTimeout(() => {
             isUpdatingFromRemote = false;

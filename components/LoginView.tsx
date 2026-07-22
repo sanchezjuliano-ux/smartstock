@@ -581,7 +581,7 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
             </div>
           </div>
         ) : !selectedProfile ? (
-          <div className="p-8 md:p-12 animate-in fade-in zoom-in duration-300">
+          <div className="p-8 md:p-12">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
               {profiles.map((profile) => (
                 <div

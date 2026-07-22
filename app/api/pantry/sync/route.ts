@@ -10,8 +10,14 @@ interface SharedPantryData {
   lastUpdated: string;
 }
 
+const DEFAULT_PROFILES = [
+  { name: 'Administrador', role: 'admin', image: 'https://picsum.photos/seed/admin/200/200', password: '123' },
+  { name: 'Maria', role: 'admin', image: 'https://picsum.photos/seed/maria/200/200', password: '123' },
+  { name: 'João', role: 'admin', image: 'https://picsum.photos/seed/joao/200/200', password: '123' },
+];
+
 let inMemoryPantryData: SharedPantryData = {
-  profiles: [],
+  profiles: DEFAULT_PROFILES,
   inventory: [],
   history: [],
   categories: [],
@@ -27,7 +33,7 @@ function loadFromFile(): SharedPantryData {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         return {
-          profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [],
+          profiles: Array.isArray(parsed.profiles) && parsed.profiles.length > 0 ? parsed.profiles : DEFAULT_PROFILES,
           inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
           history: Array.isArray(parsed.history) ? parsed.history : [],
           categories: Array.isArray(parsed.categories) ? parsed.categories : [],
