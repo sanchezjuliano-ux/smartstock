@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/firebase/firebase-blueprints/main/schema.json",
+  "collections": {
+    "users": {
+      "description": "User accounts with their SaaS subscription status",
+      "fields": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "stripeCustomerId": { "type": "string", "nullable": true },
+        "planStatus": { "type": "string", "enum": ["active", "trialling", "canceled"] },
+        "subscriptionEndsAt": { "type": "string", "nullable": true }
+      },
+      "rules": {
+        "read": "request.auth != null && request.auth.uid == resource.id",
+        "write": "request.auth != null && request.auth.uid == resource.id"
+      }
+    },
+    "items": {
+      "description": "Pantry inventory items linked to authenticated users",
+      "fields": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "brand": { "type": "string" },
+        "category": { "type": "string" },
+        "subcategory": { "type": "string", "nullable": true },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "minStock": { "type": "number", "nullable": true },
+        "validity": { "type": "string", "nullable": true },
+        "status": { "type": "string", "nullable": true },
+        "image": { "type": "string", "nullable": true }
+      },
+      "rules": {
+        "read": "request.auth != null && resource.data.userId == request.auth.uid && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.planStatus in ['active', 'trialling']",
+        "write": "request.auth != null && request.resource.data.userId == request.auth.uid && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.planStatus in ['active', 'trialling']"
+      }
+    }
+  }
+}

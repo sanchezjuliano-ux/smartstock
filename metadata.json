@@ -1,0 +1,6 @@
+{
+  "name": "Despensa Virtual",
+  "description": "Sistema de gestão de despensa e lista de compras.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

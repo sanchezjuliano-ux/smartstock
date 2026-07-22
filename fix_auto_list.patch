@@ -1,0 +1,47 @@
+--- components/AutoListsView.tsx
++++ components/AutoListsView.tsx
+@@ -21,11 +21,11 @@
+   }, [inventory]);
+ 
+   const toggleCheck = (id: string) => {
+-    setCheckedItems(prev => ({ ...prev, [id]: !prev[id] }));
++    setCheckedItems(prev => ({ ...prev, [id]: prev[id] === false ? true : false }));
+   };
+ 
+   const handleCheckout = () => {
+-    const selectedItems = listItems.filter(item => checkedItems[item.id]);
++    const selectedItems = listItems.filter(item => checkedItems[item.id] !== false);
+     if (selectedItems.length === 0) {
+       alert("Selecione pelo menos um item para concluir.");
+       return;
+@@ -45,8 +45,8 @@
+     setActiveTab('history');
+   };
+ 
+   const totalValue = listItems.reduce((acc, curr) => acc + (curr.price * curr.quantityNeeded), 0);
+-  const checkedValue = listItems.reduce((acc, curr) => checkedItems[curr.id] ? acc + (curr.price * curr.quantityNeeded) : acc, 0);
++  const checkedValue = listItems.reduce((acc, curr) => checkedItems[curr.id] !== false ? acc + (curr.price * curr.quantityNeeded) : acc, 0);
+ 
+   return (
+     <div className="space-y-6">
+@@ -87,14 +87,14 @@
+             ) : (
+               <div className="divide-y divide-outline-variant/50">
+                 {listItems.map((item) => (
+-                  <div key={item.id} className={`flex items-center gap-4 p-4 hover:bg-surface-container-low transition-colors ${checkedItems[item.id] ? 'opacity-60' : ''}`}>
++                  <div key={item.id} className={`flex items-center gap-4 p-4 hover:bg-surface-container-low transition-colors ${checkedItems[item.id] === false ? 'opacity-60' : ''}`}>
+                     <button 
+                       onClick={() => toggleCheck(item.id)}
+                       className="flex-shrink-0 text-primary transition-transform active:scale-90"
+                     >
+                       <span className="material-symbols-outlined text-2xl">
+-                        {checkedItems[item.id] ? 'check_box' : 'check_box_outline_blank'}
++                        {checkedItems[item.id] !== false ? 'check_box' : 'check_box_outline_blank'}
+                       </span>
+                     </button>
+                     
+                     <div className="flex-grow min-w-0">
+-                      <h4 className={`font-bold truncate ${checkedItems[item.id] ? 'line-through text-on-surface-variant' : 'text-on-surface'}`}>
++                      <h4 className={`font-bold truncate ${checkedItems[item.id] === false ? 'line-through text-on-surface-variant' : 'text-on-surface'}`}>
+                         {item.name}
+                       </h4>
