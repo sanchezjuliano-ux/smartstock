@@ -8,6 +8,7 @@ import HistoryChatView from '@/components/HistoryChatView';
 import ProfileSettingsModal from '@/components/ProfileSettingsModal';
 import AddItemModal from '@/components/AddItemModal';
 import { INVENTORY, HISTORY_ITEMS, PROFILES } from '@/lib/data';
+import { saveSharedData, subscribeSharedData } from '@/lib/sync';
 import Image from 'next/image';
 import { motion } from 'motion/react';
 
@@ -75,24 +76,33 @@ export default function ShoppingListView() {
     return HISTORY_ITEMS;
   });
 
-  // Persistence Effects
+  // Persistence & Real-Time Sync Effects
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('virtual_pantry_inventory', JSON.stringify(inventory));
-    }
+    saveSharedData({ inventory });
   }, [inventory]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('virtual_pantry_categories', JSON.stringify(customCategories));
-    }
+    saveSharedData({ categories: customCategories });
   }, [customCategories]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('virtual_pantry_history', JSON.stringify(historyItems));
-    }
+    saveSharedData({ history: historyItems });
   }, [historyItems]);
+
+  useEffect(() => {
+    const unsub = subscribeSharedData((data) => {
+      if (data.inventory && data.inventory.length > 0) {
+        setInventory(data.inventory);
+      }
+      if (data.categories) {
+        setCustomCategories(data.categories);
+      }
+      if (data.history && data.history.length > 0) {
+        setHistoryItems(data.history);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const activeFiltersCount = (stockFilter !== 'all' ? 1 : 0) + (selectedCategoryFilter !== '' ? 1 : 0) + (sortBy !== 'name_asc' ? 1 : 0);
 

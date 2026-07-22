@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { PROFILES } from '@/lib/data';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { saveSharedData, subscribeSharedData } from '@/lib/sync';
 
 export default function LoginView({ onLogin }: { onLogin: (profile: any) => void }) {
   const [profiles, setProfiles] = useState<any[]>(() => {
@@ -27,10 +28,17 @@ export default function LoginView({ onLogin }: { onLogin: (profile: any) => void
   });
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('virtual_pantry_profiles', JSON.stringify(profiles));
-    }
+    saveSharedData({ profiles });
   }, [profiles]);
+
+  useEffect(() => {
+    const unsub = subscribeSharedData((data) => {
+      if (data.profiles && data.profiles.length > 0) {
+        setProfiles(data.profiles);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [password, setPassword] = useState('');
