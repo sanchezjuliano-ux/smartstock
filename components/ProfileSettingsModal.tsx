@@ -70,6 +70,39 @@ export default function ProfileSettingsModal({ isOpen, onClose, user, onUpdate, 
     setIsCameraActive(false);
   };
 
+function drawImageCover(
+  ctx: CanvasRenderingContext2D,
+  src: HTMLImageElement | HTMLVideoElement,
+  targetWidth: number,
+  targetHeight: number
+) {
+  const srcWidth = (src as HTMLVideoElement).videoWidth || (src as HTMLImageElement).naturalWidth || src.width;
+  const srcHeight = (src as HTMLVideoElement).videoHeight || (src as HTMLImageElement).naturalHeight || src.height;
+
+  if (!srcWidth || !srcHeight) {
+    ctx.drawImage(src, 0, 0, targetWidth, targetHeight);
+    return;
+  }
+
+  const srcAspect = srcWidth / srcHeight;
+  const targetAspect = targetWidth / targetHeight;
+
+  let sx = 0;
+  let sy = 0;
+  let sWidth = srcWidth;
+  let sHeight = srcHeight;
+
+  if (srcAspect > targetAspect) {
+    sWidth = srcHeight * targetAspect;
+    sx = (srcWidth - sWidth) / 2;
+  } else {
+    sHeight = srcWidth / targetAspect;
+    sy = (srcHeight - sHeight) / 2;
+  }
+
+  ctx.drawImage(src, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
+}
+
   const capturePhoto = () => {
     if (videoRef.current) {
       const video = videoRef.current;
@@ -78,7 +111,7 @@ export default function ProfileSettingsModal({ isOpen, onClose, user, onUpdate, 
       canvas.height = 250;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, 250, 250);
+        drawImageCover(ctx, video, 250, 250);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         setImagePreview(dataUrl);
         stopCamera();
@@ -115,7 +148,7 @@ export default function ProfileSettingsModal({ isOpen, onClose, user, onUpdate, 
           canvas.height = 250;
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.drawImage(img, 0, 0, 250, 250);
+            drawImageCover(ctx, img, 250, 250);
             setImagePreview(canvas.toDataURL('image/jpeg', 0.8));
           } else {
             setImagePreview(raw);
