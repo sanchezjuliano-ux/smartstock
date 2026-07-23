@@ -649,7 +649,7 @@ export default function AddItemModal({
                 
                 <div className="space-y-1">
                   <label className="text-xs font-mono font-medium text-on-surface-variant block uppercase tracking-wider">
-                    Preço (R$)
+                    Preço Unitário (R$)
                   </label>
                   <input
                     type="text"
@@ -751,7 +751,7 @@ export default function AddItemModal({
                         <span className="material-symbols-outlined text-primary text-[18px]">pie_chart</span>
                         Porcionar este produto?
                       </span>
-                      <span className="text-[11px] text-on-surface-variant block">Divida o item em porções menores. O estoque só zera quando todas as porções acabarem.</span>
+                      <span className="text-[11px] text-on-surface-variant block">Divida o item em porções menores. O estoque só zera quando todas as porções acabarem. O preço continua sendo por unidade de produto.</span>
                     </div>
                   </label>
 
