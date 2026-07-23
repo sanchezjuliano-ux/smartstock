@@ -223,7 +223,10 @@ export default function AddItemModal({
     subcategory: '',
     price: '',
     validity: '',
-    stock: '1'
+    stock: '1',
+    isPortioned: false,
+    portionsPerUnit: '4',
+    currentPortions: ''
   });
 
   const [isAddingCustomCategory, setIsAddingCustomCategory] = useState(false);
@@ -247,6 +250,9 @@ export default function AddItemModal({
         setIsAddingCustomCategory(false);
         setNewCatInput('');
         if (editingItem) {
+          const isPortioned = Boolean(editingItem.isPortioned);
+          const portionsPerUnit = editingItem.portionsPerUnit ? editingItem.portionsPerUnit.toString() : '4';
+          const currentPortions = editingItem.currentPortions !== undefined ? editingItem.currentPortions.toString() : (parseInt(editingItem.stock || 1) * parseInt(portionsPerUnit)).toString();
           setFormData({
             name: editingItem.name || '',
             brand: editingItem.brand || '',
@@ -254,7 +260,10 @@ export default function AddItemModal({
             subcategory: editingItem.subcategory || '',
             price: editingItem.price ? editingItem.price.toString() : '',
             validity: editingItem.validity || '',
-            stock: editingItem.stock ? editingItem.stock.toString() : '1'
+            stock: editingItem.stock ? editingItem.stock.toString() : '1',
+            isPortioned,
+            portionsPerUnit,
+            currentPortions
           });
           if (editingItem.image) {
             setImagePreview(editingItem.image);
@@ -267,7 +276,10 @@ export default function AddItemModal({
             subcategory: '',
             price: '',
             validity: '',
-            stock: '1'
+            stock: '1',
+            isPortioned: false,
+            portionsPerUnit: '4',
+            currentPortions: '4'
           });
           setImagePreview(null);
         }
@@ -652,16 +664,23 @@ export default function AddItemModal({
                     className="w-full bg-surface border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary rounded-lg px-4 py-3 outline-none transition-all text-sm font-mono disabled:opacity-50"
                   />
                 </div>
-                
-                <div className="space-y-1 col-span-2">
+                  <div className="space-y-1 col-span-2">
                    <label className="text-xs font-mono font-medium text-on-surface-variant block uppercase tracking-wider">
-                    Estoque Inicial
+                    Estoque Inicial (Unidades)
                   </label>
                   <div className="flex items-center gap-4">
                     <button 
                       type="button"
-                      disabled={isProcessing || parseInt(formData.stock) <= 1}
-                      onClick={() => setFormData({...formData, stock: String(parseInt(formData.stock) - 1)})}
+                      disabled={isProcessing || parseInt(formData.stock) <= 0}
+                      onClick={() => {
+                        const newStk = Math.max(0, parseInt(formData.stock) - 1);
+                        const ppu = parseInt(formData.portionsPerUnit) || 4;
+                        setFormData({
+                          ...formData,
+                          stock: String(newStk),
+                          currentPortions: formData.isPortioned ? String(newStk * ppu) : formData.currentPortions
+                        });
+                      }}
                       className="w-12 h-12 rounded-lg border border-outline-variant flex items-center justify-center hover:bg-surface-container transition-colors disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined">remove</span>
@@ -669,19 +688,112 @@ export default function AddItemModal({
                     <input
                       type="text"
                       value={formData.stock}
-                      onChange={(e) => setFormData({...formData, stock: e.target.value})}
+                      onChange={(e) => {
+                        const newStk = Math.max(0, parseInt(e.target.value) || 0);
+                        const ppu = parseInt(formData.portionsPerUnit) || 4;
+                        setFormData({
+                          ...formData,
+                          stock: e.target.value,
+                          currentPortions: formData.isPortioned ? String(newStk * ppu) : formData.currentPortions
+                        });
+                      }}
                       disabled={isProcessing}
                       className="flex-1 bg-surface border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary rounded-lg px-4 py-3 outline-none transition-all text-center font-bold text-lg font-mono disabled:opacity-50"
                     />
                      <button 
                       type="button"
                       disabled={isProcessing}
-                      onClick={() => setFormData({...formData, stock: String(parseInt(formData.stock) + 1)})}
+                      onClick={() => {
+                        const newStk = (parseInt(formData.stock) || 0) + 1;
+                        const ppu = parseInt(formData.portionsPerUnit) || 4;
+                        setFormData({
+                          ...formData,
+                          stock: String(newStk),
+                          currentPortions: formData.isPortioned ? String(newStk * ppu) : formData.currentPortions
+                        });
+                      }}
                       className="w-12 h-12 rounded-lg border border-outline-variant flex items-center justify-center hover:bg-surface-container transition-colors disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined">add</span>
                     </button>
                   </div>
+                </div>
+
+                {/* Portioning Section */}
+                <div className="space-y-3 col-span-2 p-4 bg-primary/5 border border-primary/20 rounded-xl mt-2">
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={formData.isPortioned}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        const ppu = parseInt(formData.portionsPerUnit) || 4;
+                        const stk = parseInt(formData.stock) || 1;
+                        setFormData({
+                          ...formData,
+                          isPortioned: checked,
+                          currentPortions: checked ? String(stk * ppu) : formData.currentPortions
+                        });
+                      }}
+                      className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer accent-primary"
+                    />
+                    <div>
+                      <span className="text-sm font-bold text-on-surface flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-primary text-[18px]">pie_chart</span>
+                        Porcionar este produto?
+                      </span>
+                      <span className="text-[11px] text-on-surface-variant block">Divida o item em porções menores. O estoque só zera quando todas as porções acabarem.</span>
+                    </div>
+                  </label>
+
+                  {formData.isPortioned && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-primary/10 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-mono font-medium text-on-surface-variant block uppercase tracking-wider">
+                          Porções por Unidade
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={formData.portionsPerUnit}
+                          onChange={(e) => {
+                            const ppu = Math.max(1, parseInt(e.target.value) || 1);
+                            const stk = parseInt(formData.stock) || 1;
+                            setFormData({
+                              ...formData,
+                              portionsPerUnit: e.target.value,
+                              currentPortions: String(stk * ppu)
+                            });
+                          }}
+                          placeholder="Ex: 4"
+                          className="w-full bg-surface border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary rounded-lg px-3 py-2.5 outline-none transition-all text-sm font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-mono font-medium text-on-surface-variant block uppercase tracking-wider">
+                          Porções Atuais Disponíveis
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.currentPortions}
+                          onChange={(e) => {
+                            const currP = Math.max(0, parseInt(e.target.value) || 0);
+                            const ppu = parseInt(formData.portionsPerUnit) || 1;
+                            const calcStock = currP > 0 ? Math.ceil(currP / ppu) : 0;
+                            setFormData({
+                              ...formData,
+                              currentPortions: e.target.value,
+                              stock: String(calcStock)
+                            });
+                          }}
+                          placeholder="Ex: 8"
+                          className="w-full bg-surface border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-3 py-2.5 outline-none transition-all text-sm font-mono font-bold text-primary"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </form>
@@ -701,12 +813,23 @@ export default function AddItemModal({
                   if (editingItem) {
                     setInventory(inventory.map(item => {
                       if (item.id === editingItem.id) {
-                        const newStock = parseInt(formData.stock) || 0;
+                        let newStock = parseInt(formData.stock) || 0;
+                        const isPortioned = Boolean(formData.isPortioned);
+                        const portionsPerUnit = isPortioned ? (parseInt(formData.portionsPerUnit) || 1) : 1;
+                        let currentPortions = isPortioned ? (parseInt(formData.currentPortions) ?? (newStock * portionsPerUnit)) : undefined;
+
+                        if (isPortioned) {
+                          if (isNaN(currentPortions as number) || currentPortions === undefined) {
+                            currentPortions = newStock * portionsPerUnit;
+                          }
+                          newStock = (currentPortions as number) > 0 ? Math.ceil((currentPortions as number) / portionsPerUnit) : 0;
+                        }
+
                         const newStatus = newStock <= item.minStock ? (newStock === 0 ? 'ESGOTADO' : 'ESTOQUE BAIXO') : 'EM ESTOQUE';
                         const updateInfo = (newStock === 0 && item.stock !== 0)
                           ? {
-                              zeroedBy: user?.name || 'Maria',
-                              zeroedByInitials: (user?.name || 'Maria').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+                              zeroedBy: user?.name || 'Despensa Compartilhada',
+                              zeroedByInitials: (user?.name || 'Despensa Compartilhada').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
                               zeroedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                             }
                           : {};
@@ -720,6 +843,9 @@ export default function AddItemModal({
                           validity: formData.validity,
                           stock: newStock,
                           status: newStatus,
+                          isPortioned,
+                          portionsPerUnit: isPortioned ? portionsPerUnit : undefined,
+                          currentPortions: isPortioned ? currentPortions : undefined,
                           image: imagePreview || item.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200&h=200',
                           ...updateInfo
                         };
@@ -728,13 +854,25 @@ export default function AddItemModal({
                     }));
                   } else {
                     const newId = Math.max(...inventory.map((i: any) => i.id), 0) + 1;
-                    const newStock = parseInt(formData.stock) !== undefined ? (parseInt(formData.stock) || 0) : 1;
+                    let newStock = parseInt(formData.stock) !== undefined ? (parseInt(formData.stock) || 0) : 1;
                     const minStock = 1;
+
+                    const isPortioned = Boolean(formData.isPortioned);
+                    const portionsPerUnit = isPortioned ? (parseInt(formData.portionsPerUnit) || 1) : 1;
+                    let currentPortions = isPortioned ? (parseInt(formData.currentPortions) ?? (newStock * portionsPerUnit)) : undefined;
+
+                    if (isPortioned) {
+                      if (isNaN(currentPortions as number) || currentPortions === undefined) {
+                        currentPortions = newStock * portionsPerUnit;
+                      }
+                      newStock = (currentPortions as number) > 0 ? Math.ceil((currentPortions as number) / portionsPerUnit) : 0;
+                    }
+
                     const newStatus = newStock <= minStock ? (newStock === 0 ? 'ESGOTADO' : 'ESTOQUE BAIXO') : 'EM ESTOQUE';
                     const updateInfo = (newStock === 0)
                       ? {
-                          zeroedBy: user?.name || 'Maria',
-                          zeroedByInitials: (user?.name || 'Maria').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+                          zeroedBy: user?.name || 'Despensa Compartilhada',
+                          zeroedByInitials: (user?.name || 'Despensa Compartilhada').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
                           zeroedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                         }
                       : {};
@@ -749,6 +887,9 @@ export default function AddItemModal({
                       stock: newStock,
                       minStock: minStock,
                       status: newStatus,
+                      isPortioned,
+                      portionsPerUnit: isPortioned ? portionsPerUnit : undefined,
+                      currentPortions: isPortioned ? currentPortions : undefined,
                       image: imagePreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200&h=200',
                       ...updateInfo
                     }]);

@@ -9,12 +9,14 @@ function ProductCard({
   item, 
   viewMode,
   onUpdateStock,
+  onUpdatePortions,
   onEdit,
   onDelete
 }: { 
   item: any, 
   viewMode: 'grid' | 'list',
   onUpdateStock: (id: number, delta: number) => void,
+  onUpdatePortions: (id: number, delta: number) => void,
   onEdit: (item: any) => void,
   onDelete: (id: number) => void
 }) {
@@ -58,16 +60,46 @@ function ProductCard({
           </div>
         </div>
         
-        <div className={`flex items-center justify-between rounded-lg p-1 border flex-shrink-0 ${isLowStock ? 'bg-error-container/20 border-error-container' : 'bg-surface-container-low border-outline-variant'}`}>
-          <button onClick={() => onUpdateStock(item.id, -1)} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
-            <span className={`material-symbols-outlined text-sm ${isLowStock ? 'text-error' : ''}`}>remove</span>
-          </button>
-          <span className={`text-sm font-mono font-medium w-6 text-center ${isLowStock ? 'text-error' : ''}`}>
-            {item.stock}
-          </span>
-          <button onClick={() => onUpdateStock(item.id, 1)} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
-            <span className={`material-symbols-outlined text-sm ${isLowStock ? 'text-error' : ''}`}>add</span>
-          </button>
+        {/* Stock and Portion Controls */}
+        <div className="flex items-center gap-2 ml-auto shrink-0 flex-wrap justify-end">
+          {item.isPortioned && (
+            <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1">
+              <span className="material-symbols-outlined text-[15px] text-primary">pie_chart</span>
+              <div className="flex flex-col">
+                <span className="text-[9px] font-mono text-primary font-bold uppercase tracking-wider">Porções</span>
+                <span className="text-xs font-bold text-on-surface">
+                  {item.currentPortions ?? 0} {item.currentPortions === 1 ? 'porção' : 'porções'}
+                </span>
+              </div>
+              <button 
+                onClick={() => onUpdatePortions(item.id, -1)}
+                disabled={!item.currentPortions || item.currentPortions <= 0}
+                className="ml-1 p-1 bg-surface-container-lowest border border-outline-variant hover:bg-error/10 hover:text-error text-on-surface-variant rounded transition-colors active:scale-95 disabled:opacity-30 cursor-pointer flex items-center shadow-sm"
+                title="-1 Porção"
+              >
+                <span className="material-symbols-outlined text-[13px]">remove</span>
+              </button>
+              <button 
+                onClick={() => onUpdatePortions(item.id, 1)}
+                className="p-1 bg-surface-container-lowest border border-outline-variant hover:bg-primary/10 hover:text-primary text-on-surface-variant rounded transition-colors active:scale-95 cursor-pointer flex items-center shadow-sm"
+                title="+1 Porção"
+              >
+                <span className="material-symbols-outlined text-[13px]">add</span>
+              </button>
+            </div>
+          )}
+
+          <div className={`flex items-center justify-between rounded-lg p-1 border flex-shrink-0 ${isLowStock ? 'bg-error-container/20 border-error-container' : 'bg-surface-container-low border-outline-variant'}`}>
+            <button onClick={() => onUpdateStock(item.id, -1)} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
+              <span className={`material-symbols-outlined text-sm ${isLowStock ? 'text-error' : ''}`}>remove</span>
+            </button>
+            <span className={`text-sm font-mono font-medium w-8 text-center ${isLowStock ? 'text-error' : ''}`}>
+              {item.stock} un
+            </span>
+            <button onClick={() => onUpdateStock(item.id, 1)} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
+              <span className={`material-symbols-outlined text-sm ${isLowStock ? 'text-error' : ''}`}>add</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -105,12 +137,44 @@ function ProductCard({
           <span className="text-sm text-on-surface-variant italic">Val: {item.validity}</span>
         </div>
       </div>
-      <div className={`flex items-center justify-between rounded-lg p-1 border mt-auto ${isLowStock ? 'bg-error-container/20 border-error-container' : 'bg-surface-container-low border-outline-variant'}`}>
+      {item.isPortioned && (
+        <div className="bg-primary/10 border border-primary/20 rounded-xl p-2.5 flex items-center justify-between gap-2 mt-auto">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">pie_chart</span>
+              Porções
+            </span>
+            <span className="text-xs font-extrabold text-on-surface">
+              {item.currentPortions ?? 0} {item.currentPortions === 1 ? 'porção' : 'porções'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onUpdatePortions(item.id, -1)}
+              disabled={!item.currentPortions || item.currentPortions <= 0}
+              className="px-2 py-1 bg-surface-container-lowest border border-outline-variant/80 hover:bg-error/10 hover:border-error/30 text-error rounded-lg text-xs font-bold transition-all active:scale-95 disabled:opacity-40 cursor-pointer flex items-center gap-1 shadow-sm"
+              title="Diminuir 1 porção"
+            >
+              <span className="material-symbols-outlined text-[14px]">remove</span>
+              <span className="text-[10px] font-mono font-bold">Porção</span>
+            </button>
+            <button
+              onClick={() => onUpdatePortions(item.id, 1)}
+              className="p-1.5 bg-surface-container-lowest border border-outline-variant/80 hover:bg-primary/10 hover:border-primary/30 text-primary rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-sm"
+              title="Adicionar 1 porção"
+            >
+              <span className="material-symbols-outlined text-[14px]">add</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className={`flex items-center justify-between rounded-lg p-1 border ${!item.isPortioned ? 'mt-auto' : ''} ${isLowStock ? 'bg-error-container/20 border-error-container' : 'bg-surface-container-low border-outline-variant'}`}>
         <button onClick={() => onUpdateStock(item.id, -1)} className={`w-10 h-10 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
           <span className={`material-symbols-outlined ${isLowStock ? 'text-error' : ''}`}>remove</span>
         </button>
-        <span className={`text-xl font-mono font-medium w-8 text-center ${isLowStock ? 'text-error' : ''}`}>
-          {item.stock}
+        <span className={`text-sm font-mono font-bold w-12 text-center ${isLowStock ? 'text-error' : ''}`}>
+          {item.stock} un
         </span>
         <button onClick={() => onUpdateStock(item.id, 1)} className={`w-10 h-10 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
           <span className={`material-symbols-outlined ${isLowStock ? 'text-error' : ''}`}>add</span>
@@ -126,6 +190,7 @@ function CategorySection({
   items, 
   viewMode,
   onUpdateStock,
+  onUpdatePortions,
   onEdit,
   onDelete
 }: { 
@@ -134,6 +199,7 @@ function CategorySection({
   items: any[], 
   viewMode: 'grid' | 'list',
   onUpdateStock: (id: number, delta: number) => void,
+  onUpdatePortions: (id: number, delta: number) => void,
   onEdit: (item: any) => void,
   onDelete: (id: number) => void
 }) {
@@ -156,6 +222,7 @@ function CategorySection({
             item={item} 
             viewMode={viewMode} 
             onUpdateStock={onUpdateStock} 
+            onUpdatePortions={onUpdatePortions}
             onEdit={onEdit} 
             onDelete={onDelete} 
           />
@@ -208,15 +275,54 @@ export default function InventoryView({
         const newStock = Math.max(0, item.stock + delta);
         const newStatus = newStock <= item.minStock ? (newStock === 0 ? 'ESGOTADO' : 'ESTOQUE BAIXO') : 'EM ESTOQUE';
         
+        let portionUpdates = {};
+        if (item.isPortioned) {
+          const ppu = item.portionsPerUnit || 1;
+          portionUpdates = {
+            currentPortions: newStock * ppu
+          };
+        }
+
         const updateInfo = (newStock === 0 && item.stock !== 0 && user) 
           ? { 
-              zeroedBy: user.name, 
-              zeroedByInitials: user.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+              zeroedBy: user.name || 'Despensa Compartilhada', 
+              zeroedByInitials: (user.name || 'Despensa Compartilhada').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
               zeroedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
             } 
           : {};
 
-        return { ...item, stock: newStock, status: newStatus, ...updateInfo };
+        return { ...item, stock: newStock, status: newStatus, ...portionUpdates, ...updateInfo };
+      }
+      return item;
+    }));
+  };
+
+  const handleUpdatePortions = (id: number, delta: number) => {
+    setInventory(inventory.map(item => {
+      if (item.id === id) {
+        const currentPortions = item.currentPortions !== undefined
+          ? item.currentPortions
+          : ((item.stock || 0) * (item.portionsPerUnit || 1));
+        const newPortions = Math.max(0, currentPortions + delta);
+        const portionsPerUnit = item.portionsPerUnit || 1;
+        const newStock = newPortions > 0 ? Math.ceil(newPortions / portionsPerUnit) : 0;
+        const newStatus = newStock <= item.minStock ? (newStock === 0 ? 'ESGOTADO' : 'ESTOQUE BAIXO') : 'EM ESTOQUE';
+
+        const updateInfo = (newPortions === 0 && currentPortions > 0)
+          ? {
+              zeroedBy: user?.name || 'Despensa Compartilhada',
+              zeroedByInitials: (user?.name || 'Despensa Compartilhada').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+              zeroedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            }
+          : {};
+
+        return {
+          ...item,
+          currentPortions: newPortions,
+          stock: newStock,
+          status: newStatus,
+          ...updateInfo
+        };
       }
       return item;
     }));
@@ -529,13 +635,13 @@ export default function InventoryView({
         </div>
       ) : (
         <>
-          <CategorySection title="Despensa" icon="kitchen" items={despensa} viewMode={viewMode} onUpdateStock={handleUpdateStock} onDelete={handleDelete} onEdit={handleEdit} />
+          <CategorySection title="Despensa" icon="kitchen" items={despensa} viewMode={viewMode} onUpdateStock={handleUpdateStock} onUpdatePortions={handleUpdatePortions} onDelete={handleDelete} onEdit={handleEdit} />
           
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <CategorySection title="Higiene" icon="sanitizer" items={higiene} viewMode={viewMode} onUpdateStock={handleUpdateStock} onDelete={handleDelete} onEdit={handleEdit} />
-            <CategorySection title="Limpeza" icon="cleaning_services" items={limpeza} viewMode={viewMode} onUpdateStock={handleUpdateStock} onDelete={handleDelete} onEdit={handleEdit} />
+            <CategorySection title="Higiene" icon="sanitizer" items={higiene} viewMode={viewMode} onUpdateStock={handleUpdateStock} onUpdatePortions={handleUpdatePortions} onDelete={handleDelete} onEdit={handleEdit} />
+            <CategorySection title="Limpeza" icon="cleaning_services" items={limpeza} viewMode={viewMode} onUpdateStock={handleUpdateStock} onUpdatePortions={handleUpdatePortions} onDelete={handleDelete} onEdit={handleEdit} />
             {customCategories.map(cat => (
-               <CategorySection key={cat} title={cat} icon="category" items={filterItems(inventory.filter(i => i.category === cat))} viewMode={viewMode} onUpdateStock={handleUpdateStock} onDelete={handleDelete} onEdit={handleEdit} />
+               <CategorySection key={cat} title={cat} icon="category" items={filterItems(inventory.filter(i => i.category === cat))} viewMode={viewMode} onUpdateStock={handleUpdateStock} onUpdatePortions={handleUpdatePortions} onDelete={handleDelete} onEdit={handleEdit} />
             ))}
           </div>
         </>
