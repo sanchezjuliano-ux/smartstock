@@ -60,12 +60,23 @@ async function getCloudData(): Promise<SharedPantryData> {
 
     if (!error && data?.data) {
       const cloudData = data.data as SharedPantryData;
+      const inv = deduplicateList(Array.isArray(cloudData.inventory) ? cloudData.inventory : inMemoryPantryData.inventory);
+      const cats = deduplicateList([
+        'Despensa', 'Limpeza', 'Higiene',
+        ...(Array.isArray(cloudData.categories) ? cloudData.categories : inMemoryPantryData.categories),
+        ...inv.map((i: any) => i.category).filter(Boolean)
+      ]);
+      const subs = deduplicateList([
+        ...(Array.isArray(cloudData.subcategories) ? cloudData.subcategories : inMemoryPantryData.subcategories),
+        ...inv.map((i: any) => i.subcategory).filter(Boolean)
+      ]);
+
       const result: SharedPantryData = {
         profiles: deduplicateList(Array.isArray(cloudData.profiles) ? cloudData.profiles : inMemoryPantryData.profiles),
-        inventory: deduplicateList(Array.isArray(cloudData.inventory) ? cloudData.inventory : []),
-        history: deduplicateList(Array.isArray(cloudData.history) ? cloudData.history : []),
-        categories: deduplicateList(Array.isArray(cloudData.categories) ? cloudData.categories : ['Despensa', 'Limpeza', 'Higiene']),
-        subcategories: deduplicateList(Array.isArray(cloudData.subcategories) ? cloudData.subcategories : []),
+        inventory: inv,
+        history: deduplicateList(Array.isArray(cloudData.history) ? cloudData.history : inMemoryPantryData.history),
+        categories: cats,
+        subcategories: subs,
         lastUpdated: data.updated_at || cloudData.lastUpdated || new Date().toISOString(),
       };
       inMemoryPantryData = result;
@@ -119,12 +130,30 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const current = await getCloudData();
 
+    const incomingInv = Array.isArray(body.inventory) ? body.inventory : current.inventory;
+    const cleanInv = deduplicateList(incomingInv);
+    const invCategories = cleanInv.map((i: any) => i.category).filter(Boolean);
+    const invSubcategories = cleanInv.map((i: any) => i.subcategory).filter(Boolean);
+
+    const mergedCategories = deduplicateList([
+      'Despensa', 'Limpeza', 'Higiene',
+      ...(Array.isArray(current.categories) ? current.categories : []),
+      ...(Array.isArray(body.categories) ? body.categories : []),
+      ...invCategories
+    ]);
+
+    const mergedSubcategories = deduplicateList([
+      ...(Array.isArray(current.subcategories) ? current.subcategories : []),
+      ...(Array.isArray(body.subcategories) ? body.subcategories : []),
+      ...invSubcategories
+    ]);
+
     const updatedData: SharedPantryData = {
       profiles: body.profiles !== undefined && Array.isArray(body.profiles) ? deduplicateList(body.profiles) : current.profiles,
-      inventory: body.inventory !== undefined && Array.isArray(body.inventory) ? deduplicateList(body.inventory) : current.inventory,
+      inventory: cleanInv,
       history: body.history !== undefined && Array.isArray(body.history) ? deduplicateList(body.history) : current.history,
-      categories: body.categories !== undefined && Array.isArray(body.categories) ? deduplicateList(body.categories) : current.categories,
-      subcategories: body.subcategories !== undefined && Array.isArray(body.subcategories) ? deduplicateList(body.subcategories) : current.subcategories,
+      categories: mergedCategories,
+      subcategories: mergedSubcategories,
       lastUpdated: new Date().toISOString(),
     };
 

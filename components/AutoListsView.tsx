@@ -921,25 +921,48 @@ export default function AutoListsView({
                           placeholder="Ex: Laticínios, Enlatados..."
                           className="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-3 outline-none text-sm transition-all focus:border-primary"
                         />
-                        <datalist id="autolist-subcategories-datalist">
-                          {(() => {
-                            const rawList = [...customSubcategories, ...(inventory || []).map((i: any) => i.subcategory).filter(Boolean)];
-                            const distinct: string[] = [];
-                            const seen = new Set<string>();
-                            for (const s of rawList) {
-                              if (!s) continue;
-                              const trimmed = String(s).trim();
-                              const lower = trimmed.toLowerCase();
-                              if (!seen.has(lower)) {
-                                seen.add(lower);
-                                distinct.push(trimmed);
-                              }
+                        {(() => {
+                          const rawList = [...customSubcategories, ...(inventory || []).map((i: any) => i.subcategory).filter(Boolean)];
+                          const distinct: string[] = [];
+                          const seen = new Set<string>();
+                          for (const s of rawList) {
+                            if (!s) continue;
+                            const trimmed = String(s).trim();
+                            const lower = trimmed.toLowerCase();
+                            if (!seen.has(lower)) {
+                              seen.add(lower);
+                              distinct.push(trimmed);
                             }
-                            return distinct.map(sub => (
-                              <option key={sub} value={sub} />
-                            ));
-                          })()}
-                        </datalist>
+                          }
+                          return (
+                            <>
+                              <datalist id="autolist-subcategories-datalist">
+                                {distinct.map(sub => (
+                                  <option key={sub} value={sub} />
+                                ))}
+                              </datalist>
+                              {distinct.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1.5 pt-1.5 max-h-24 overflow-y-auto">
+                                  <span className="text-[10px] font-mono text-outline font-bold uppercase mr-0.5">Sugestões:</span>
+                                  {distinct.map(sub => (
+                                    <button
+                                      key={sub}
+                                      type="button"
+                                      onClick={() => setNewSubcategory(sub)}
+                                      className={`px-2 py-0.5 rounded-md text-[11px] font-medium border transition-all cursor-pointer ${
+                                        (newSubcategory || '').toLowerCase() === sub.toLowerCase()
+                                          ? 'bg-primary text-on-primary border-primary font-bold shadow-xs'
+                                          : 'bg-surface-container-high hover:bg-surface-container-highest border-outline-variant/60 text-on-surface-variant'
+                                      }`}
+                                    >
+                                      {sub}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
 
                       <div className="space-y-1">

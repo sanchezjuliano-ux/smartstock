@@ -65,7 +65,7 @@ export function deduplicateSubcategories(subs: any[]): string[] {
 
 export function getInitialSharedData(): SharedData {
   if (typeof window === 'undefined') {
-    return { profiles: [], inventory: [], history: [], categories: [], subcategories: [] };
+    return { profiles: [], inventory: [], history: [], categories: ['Despensa', 'Limpeza', 'Higiene'], subcategories: [] };
   }
 
   const getStored = (key: string, fallback: any) => {
@@ -77,12 +77,28 @@ export function getInitialSharedData(): SharedData {
     }
   };
 
+  const storedInv = deduplicateInventory(getStored('virtual_pantry_inventory', []));
+  const storedCats = getStored('virtual_pantry_categories', ['Despensa', 'Limpeza', 'Higiene']);
+  const storedSubs = getStored('virtual_pantry_subcategories', []);
+
+  // Merge categories from inventory into categories list
+  const allCats = deduplicateCategories([
+    'Despensa', 'Limpeza', 'Higiene',
+    ...(Array.isArray(storedCats) ? storedCats : []),
+    ...storedInv.map((i: any) => i.category).filter(Boolean)
+  ]);
+
+  const allSubs = deduplicateSubcategories([
+    ...(Array.isArray(storedSubs) ? storedSubs : []),
+    ...storedInv.map((i: any) => i.subcategory).filter(Boolean)
+  ]);
+
   return {
     profiles: getStored('virtual_pantry_profiles', []),
-    inventory: deduplicateInventory(getStored('virtual_pantry_inventory', [])),
+    inventory: storedInv,
     history: getStored('virtual_pantry_history', []),
-    categories: deduplicateCategories(getStored('virtual_pantry_categories', ['Despensa', 'Limpeza', 'Higiene'])),
-    subcategories: deduplicateSubcategories(getStored('virtual_pantry_subcategories', [])),
+    categories: allCats,
+    subcategories: allSubs,
   };
 }
 
@@ -116,7 +132,10 @@ function applyDataToLocalStorage(data: Partial<SharedData>): boolean {
       }
     }
     if (Array.isArray(data.categories)) {
-      const cleanCats = deduplicateCategories(data.categories);
+      const existingStored = (() => {
+        try { return JSON.parse(localStorage.getItem('virtual_pantry_categories') || '[]'); } catch { return []; }
+      })();
+      const cleanCats = deduplicateCategories([...existingStored, ...data.categories]);
       const str = JSON.stringify(cleanCats);
       if (localStorage.getItem('virtual_pantry_categories') !== str) {
         localStorage.setItem('virtual_pantry_categories', str);
@@ -124,7 +143,10 @@ function applyDataToLocalStorage(data: Partial<SharedData>): boolean {
       }
     }
     if (Array.isArray(data.subcategories)) {
-      const cleanSubs = deduplicateSubcategories(data.subcategories);
+      const existingStored = (() => {
+        try { return JSON.parse(localStorage.getItem('virtual_pantry_subcategories') || '[]'); } catch { return []; }
+      })();
+      const cleanSubs = deduplicateSubcategories([...existingStored, ...data.subcategories]);
       const str = JSON.stringify(cleanSubs);
       if (localStorage.getItem('virtual_pantry_subcategories') !== str) {
         localStorage.setItem('virtual_pantry_subcategories', str);
@@ -141,11 +163,29 @@ export async function saveSharedData(partialData: Partial<SharedData>) {
   if (typeof window === 'undefined') return;
   if (isUpdatingFromRemote) return;
 
-  const sanitizedData: Partial<SharedData> = {
-    ...partialData,
-    inventory: partialData.inventory ? deduplicateInventory(partialData.inventory) : undefined,
-    categories: partialData.categories ? deduplicateCategories(partialData.categories) : undefined,
-    subcategories: partialData.subcategories ? deduplicateSubcategories(partialData.subcategories) : undefined,
+  const current = getInitialSharedData();
+
+  const inventoryToSave = partialData.inventory !== undefined ? partialData.inventory : current.inventory;
+  const cleanInv = deduplicateInventory(inventoryToSave);
+
+  const combinedCats = deduplicateCategories([
+    ...current.categories,
+    ...(partialData.categories || []),
+    ...cleanInv.map((i: any) => i.category).filter(Boolean)
+  ]);
+
+  const combinedSubs = deduplicateSubcategories([
+    ...current.subcategories,
+    ...(partialData.subcategories || []),
+    ...cleanInv.map((i: any) => i.subcategory).filter(Boolean)
+  ]);
+
+  const sanitizedData: SharedData = {
+    profiles: partialData.profiles !== undefined ? partialData.profiles : current.profiles,
+    inventory: cleanInv,
+    history: partialData.history !== undefined ? partialData.history : current.history,
+    categories: combinedCats,
+    subcategories: combinedSubs,
   };
 
   applyDataToLocalStorage(sanitizedData);
@@ -173,12 +213,10 @@ export async function saveSharedData(partialData: Partial<SharedData>) {
 
   // Direct client-side Supabase write
   try {
-    const current = getInitialSharedData();
-    const merged = { ...current, ...sanitizedData };
     const nowIso = new Date().toISOString();
     await supabase.from('shared_pantry').upsert({
       id: 'main',
-      data: merged,
+      data: sanitizedData,
       updated_at: nowIso,
     });
   } catch (err) {

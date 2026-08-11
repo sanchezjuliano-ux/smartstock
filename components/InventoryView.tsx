@@ -130,7 +130,9 @@ function CategorySection({
   onUpdateStock,
   onUpdatePortions,
   onEdit,
-  onDelete
+  onDelete,
+  onAddNewItemToCategory,
+  onDeleteCategory
 }: { 
   title: string, 
   icon: string, 
@@ -139,9 +141,11 @@ function CategorySection({
   onUpdateStock: (id: number, delta: number) => void,
   onUpdatePortions?: (id: number, delta: number) => void,
   onEdit: (item: any) => void,
-  onDelete: (id: number) => void
+  onDelete: (id: number) => void,
+  onAddNewItemToCategory?: (category: string) => void,
+  onDeleteCategory?: (category: string) => void
 }) {
-  if (items.length === 0) return null;
+  const isDefaultCategory = ['despensa', 'limpeza', 'higiene'].includes(title.toLowerCase().trim());
 
   return (
     <section className="flex flex-col gap-4 mt-8 first:mt-0">
@@ -149,23 +153,61 @@ function CategorySection({
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-primary">{icon}</span>
           <h3 className="text-xl font-semibold">{title}</h3>
-          <span className="px-2 py-0.5 bg-surface-container text-[10px] font-mono rounded uppercase">{items.length} ITENS</span>
+          <span className="px-2 py-0.5 bg-surface-container text-[10px] font-mono rounded uppercase">
+            {items.length} {items.length === 1 ? 'ITEM' : 'ITENS'}
+          </span>
         </div>
-        <button className="text-[12px] font-mono font-medium text-secondary hover:underline">VER TUDO</button>
+        <div className="flex items-center gap-2">
+          {onAddNewItemToCategory && (
+            <button 
+              onClick={() => onAddNewItemToCategory(title)}
+              className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-primary hover:bg-primary/10 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[14px]">add</span>
+              NOVO ITEM
+            </button>
+          )}
+          {!isDefaultCategory && items.length === 0 && onDeleteCategory && (
+            <button 
+              onClick={() => onDeleteCategory(title)}
+              className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-error hover:bg-error/10 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+              title="Excluir categoria vazia"
+            >
+              <span className="material-symbols-outlined text-[14px]">delete</span>
+              EXCLUIR
+            </button>
+          )}
+        </div>
       </div>
-      <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col gap-2"}>
-        {items.map(item => (
-          <ProductCard 
-            key={item.id} 
-            item={item} 
-            viewMode={viewMode} 
-            onUpdateStock={onUpdateStock} 
-            onUpdatePortions={onUpdatePortions}
-            onEdit={onEdit} 
-            onDelete={onDelete} 
-          />
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <div className="border border-dashed border-outline-variant/80 rounded-2xl p-6 text-center bg-surface-container-low/30 flex flex-col items-center justify-center gap-2.5">
+          <span className="material-symbols-outlined text-3xl text-outline/60">{icon}</span>
+          <p className="text-xs text-on-surface-variant font-medium">Nenhum item cadastrado em <strong>{title}</strong> ainda.</p>
+          {onAddNewItemToCategory && (
+            <button 
+              onClick={() => onAddNewItemToCategory(title)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-primary text-on-primary rounded-xl text-xs font-bold shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[15px]">add</span>
+              Cadastrar Item em {title}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col gap-2"}>
+          {items.map(item => (
+            <ProductCard 
+              key={item.id} 
+              item={item} 
+              viewMode={viewMode} 
+              onUpdateStock={onUpdateStock} 
+              onUpdatePortions={onUpdatePortions} 
+              onEdit={onEdit} 
+              onDelete={onDelete} 
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -288,20 +330,45 @@ export default function InventoryView({
     const trimmedSub = newSubcategoryName.trim();
 
     if (trimmedCat) {
-      if (!distinctCategories.some(c => c.toLowerCase() === trimmedCat.toLowerCase())) {
-        setCustomCategories([...customCategories, trimmedCat]);
-      }
+      setCustomCategories((prev: string[]) => {
+        const list = Array.isArray(prev) ? prev : [];
+        if (!list.some(c => c.toLowerCase() === trimmedCat.toLowerCase())) {
+          return [...list, trimmedCat];
+        }
+        return list;
+      });
     }
 
     if (trimmedSub) {
-      if (!customSubcategories.some(s => s.toLowerCase() === trimmedSub.toLowerCase())) {
-        setCustomSubcategories([...customSubcategories, trimmedSub]);
-      }
+      setCustomSubcategories((prev: string[]) => {
+        const list = Array.isArray(prev) ? prev : [];
+        if (!list.some(s => s.toLowerCase() === trimmedSub.toLowerCase())) {
+          return [...list, trimmedSub];
+        }
+        return list;
+      });
     }
 
     setNewCategoryName('');
     setNewSubcategoryName('');
     setIsCategoryModalOpen(false);
+  };
+
+  const handleDeleteCategory = (catToDelete: string) => {
+    if (confirm(`Deseja remover a categoria "${catToDelete}"?`)) {
+      setCustomCategories((prev: string[]) => {
+        const list = Array.isArray(prev) ? prev : [];
+        return list.filter(c => c.toLowerCase() !== catToDelete.toLowerCase());
+      });
+    }
+  };
+
+  const handleAddNewItemToCategory = (cat: string) => {
+    if (setEditingItem && setIsModalOpen && setModalMode) {
+      setEditingItem({ category: cat });
+      setModalMode('manual');
+      setIsModalOpen(true);
+    }
   };
 
   const handleUpdateStock = (id: number, delta: number) => {
@@ -436,6 +503,8 @@ export default function InventoryView({
 
   // 3. Dynamic category grouping: EACH category is rendered ONLY ONCE!
   const filteredCategoriesWithItems = useMemo(() => {
+    const isSearchingOrFiltering = Boolean(searchQuery.trim()) || stockFilter !== 'all' || showLowStockOnly;
+
     return distinctCategories.map(cat => {
       const catItems = filterItems(
         uniqueInventory.filter(i => (i.category || 'Despensa').trim().toLowerCase() === cat.toLowerCase())
@@ -445,7 +514,15 @@ export default function InventoryView({
         icon: getCategoryIcon(cat),
         items: catItems
       };
-    }).filter(group => group.items.length > 0);
+    }).filter(group => {
+      if (selectedCategoryFilter !== '') {
+        return group.category.toLowerCase() === selectedCategoryFilter.toLowerCase();
+      }
+      if (isSearchingOrFiltering) {
+        return group.items.length > 0;
+      }
+      return true;
+    });
   }, [distinctCategories, uniqueInventory, searchQuery, stockFilter, selectedCategoryFilter, sortBy, showLowStockOnly]);
 
   const totalFilteredCount = useMemo(() => {
@@ -658,6 +735,8 @@ export default function InventoryView({
               onUpdatePortions={handleUpdatePortions} 
               onDelete={handleDelete} 
               onEdit={handleEdit} 
+              onAddNewItemToCategory={handleAddNewItemToCategory}
+              onDeleteCategory={handleDeleteCategory}
             />
           ))}
         </div>

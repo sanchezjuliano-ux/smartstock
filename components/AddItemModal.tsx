@@ -645,25 +645,48 @@ export default function AddItemModal({
                     disabled={isProcessing}
                     className="w-full bg-surface border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary rounded-lg px-4 py-3 outline-none transition-all text-sm disabled:opacity-50"
                   />
-                  <datalist id="subcategories-datalist">
-                    {(() => {
-                      const rawList = [...customSubcategories, ...(inventory || []).map((i: any) => i.subcategory).filter(Boolean)];
-                      const distinct: string[] = [];
-                      const seen = new Set<string>();
-                      for (const s of rawList) {
-                        if (!s) continue;
-                        const trimmed = String(s).trim();
-                        const lower = trimmed.toLowerCase();
-                        if (!seen.has(lower)) {
-                          seen.add(lower);
-                          distinct.push(trimmed);
-                        }
+                  {(() => {
+                    const rawList = [...customSubcategories, ...(inventory || []).map((i: any) => i.subcategory).filter(Boolean)];
+                    const distinct: string[] = [];
+                    const seen = new Set<string>();
+                    for (const s of rawList) {
+                      if (!s) continue;
+                      const trimmed = String(s).trim();
+                      const lower = trimmed.toLowerCase();
+                      if (!seen.has(lower)) {
+                        seen.add(lower);
+                        distinct.push(trimmed);
                       }
-                      return distinct.map(sub => (
-                        <option key={sub} value={sub} />
-                      ));
-                    })()}
-                  </datalist>
+                    }
+                    return (
+                      <>
+                        <datalist id="subcategories-datalist">
+                          {distinct.map(sub => (
+                            <option key={sub} value={sub} />
+                          ))}
+                        </datalist>
+                        {distinct.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1.5 max-h-24 overflow-y-auto">
+                            <span className="text-[10px] font-mono text-outline font-bold uppercase mr-0.5">Sugestões:</span>
+                            {distinct.map(sub => (
+                              <button
+                                key={sub}
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, subcategory: sub }))}
+                                className={`px-2 py-0.5 rounded-md text-[11px] font-medium border transition-all cursor-pointer ${
+                                  (formData.subcategory || '').toLowerCase() === sub.toLowerCase()
+                                    ? 'bg-secondary text-on-secondary border-secondary font-bold shadow-xs'
+                                    : 'bg-surface-container hover:bg-surface-container-high border-outline-variant/60 text-on-surface-variant'
+                                }`}
+                              >
+                                {sub}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 
                 <div className="space-y-1">
