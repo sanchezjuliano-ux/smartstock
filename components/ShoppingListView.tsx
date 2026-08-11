@@ -10,7 +10,6 @@ import AddItemModal from '@/components/AddItemModal';
 import { INVENTORY, HISTORY_ITEMS, PROFILES } from '@/lib/data';
 import { saveSharedData, subscribeSharedData } from '@/lib/sync';
 import Image from 'next/image';
-import { motion } from 'motion/react';
 
 const SHARED_USER = {
   name: 'Despensa Compartilhada',

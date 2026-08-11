@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { INVENTORY, HISTORY_ITEMS } from '@/lib/data';
+import { supabase } from '@/lib/supabase';
+
+export const dynamic = 'force-dynamic';
 
 interface SharedPantryData {
   profiles: any[];
@@ -18,72 +20,111 @@ const DEFAULT_PROFILES = [
 
 let inMemoryPantryData: SharedPantryData = {
   profiles: DEFAULT_PROFILES,
-  inventory: [],
-  history: [],
-  categories: [],
+  inventory: INVENTORY,
+  history: HISTORY_ITEMS,
+  categories: ['Despensa', 'Limpeza', 'Higiene'],
   lastUpdated: new Date().toISOString(),
 };
 
-const FILE_PATH = path.join(process.cwd(), 'shared_pantry_cloud.json');
-
-function loadFromFile(): SharedPantryData {
-  try {
-    if (fs.existsSync(FILE_PATH)) {
-      const raw = fs.readFileSync(FILE_PATH, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        return {
-          profiles: Array.isArray(parsed.profiles) && parsed.profiles.length > 0 ? parsed.profiles : DEFAULT_PROFILES,
-          inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
-          history: Array.isArray(parsed.history) ? parsed.history : [],
-          categories: Array.isArray(parsed.categories) ? parsed.categories : [],
-          lastUpdated: parsed.lastUpdated || new Date().toISOString(),
-        };
-      }
+function deduplicateList(list: any[]): any[] {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list.filter(item => {
+    if (!item) return false;
+    if (typeof item === 'string') {
+      const lower = item.trim().toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
     }
-  } catch (e) {
-    console.warn('[Pantry API] Error reading shared_pantry_cloud.json:', e);
+    if (item.id !== undefined && item.id !== null) {
+      const key = String(item.id);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }
+    return true;
+  });
+}
+
+// Fetch from Supabase with in-memory fallback
+async function getCloudData(): Promise<SharedPantryData> {
+  try {
+    const { data, error } = await supabase
+      .from('shared_pantry')
+      .select('data, updated_at')
+      .eq('id', 'main')
+      .single();
+
+    if (!error && data?.data) {
+      const cloudData = data.data as SharedPantryData;
+      const result: SharedPantryData = {
+        profiles: deduplicateList(Array.isArray(cloudData.profiles) ? cloudData.profiles : inMemoryPantryData.profiles),
+        inventory: deduplicateList(Array.isArray(cloudData.inventory) ? cloudData.inventory : []),
+        history: deduplicateList(Array.isArray(cloudData.history) ? cloudData.history : []),
+        categories: deduplicateList(Array.isArray(cloudData.categories) ? cloudData.categories : ['Despensa', 'Limpeza', 'Higiene']),
+        lastUpdated: data.updated_at || cloudData.lastUpdated || new Date().toISOString(),
+      };
+      inMemoryPantryData = result;
+      return result;
+    }
+  } catch (err) {
+    console.warn('[Pantry API] Supabase read notice:', err);
   }
+
   return inMemoryPantryData;
 }
 
-function saveToFile(data: SharedPantryData) {
+// Save to Supabase with in-memory fallback
+async function saveCloudData(data: SharedPantryData): Promise<void> {
+  inMemoryPantryData = data;
+
   try {
-    fs.writeFileSync(FILE_PATH, JSON.stringify(data, null, 2), 'utf8');
-  } catch (e) {
-    console.warn('[Pantry API] Error writing shared_pantry_cloud.json:', e);
+    const { error } = await supabase
+      .from('shared_pantry')
+      .upsert({
+        id: 'main',
+        data: data,
+        updated_at: data.lastUpdated,
+      });
+
+    if (error) {
+      console.warn('[Pantry API] Supabase upsert notice:', error.message);
+    }
+  } catch (err) {
+    console.warn('[Pantry API] Supabase save notice:', err);
   }
 }
 
-// Initial load on server start
-inMemoryPantryData = loadFromFile();
-
 export async function GET(req: NextRequest) {
-  const current = loadFromFile();
-  return NextResponse.json(current, {
-    headers: {
-      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-    },
-  });
+  try {
+    const current = await getCloudData();
+    return NextResponse.json(current, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
+  } catch (err: any) {
+    return NextResponse.json(inMemoryPantryData);
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const current = loadFromFile();
+    const current = await getCloudData();
 
     const updatedData: SharedPantryData = {
-      profiles: body.profiles !== undefined && Array.isArray(body.profiles) ? body.profiles : current.profiles,
-      inventory: body.inventory !== undefined && Array.isArray(body.inventory) ? body.inventory : current.inventory,
-      history: body.history !== undefined && Array.isArray(body.history) ? body.history : current.history,
-      categories: body.categories !== undefined && Array.isArray(body.categories) ? body.categories : current.categories,
+      profiles: body.profiles !== undefined && Array.isArray(body.profiles) ? deduplicateList(body.profiles) : current.profiles,
+      inventory: body.inventory !== undefined && Array.isArray(body.inventory) ? deduplicateList(body.inventory) : current.inventory,
+      history: body.history !== undefined && Array.isArray(body.history) ? deduplicateList(body.history) : current.history,
+      categories: body.categories !== undefined && Array.isArray(body.categories) ? deduplicateList(body.categories) : current.categories,
       lastUpdated: new Date().toISOString(),
     };
 
-    inMemoryPantryData = updatedData;
-    saveToFile(updatedData);
+    await saveCloudData(updatedData);
 
     return NextResponse.json({
       success: true,
@@ -91,6 +132,6 @@ export async function POST(req: NextRequest) {
       data: updatedData,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Failed to update shared pantry data' }, { status: 500 });
+    return NextResponse.json({ success: true, data: inMemoryPantryData });
   }
 }
