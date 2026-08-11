@@ -252,16 +252,15 @@ export default function AutoListsView({
   }, [isAddingItem, imageFile, mode]);
 
   const listItems = useMemo(() => {
-    return inventory.filter(item => 
-      item.status === 'ESTOQUE BAIXO' || 
+    return (inventory || []).filter(item => 
+      item.stock === 0 || 
       item.status === 'ESGOTADO' || 
-      item.stock < item.minStock ||
       item.isForcedReplenish === true
     ).map(item => ({
       ...item,
       quantityNeeded: item.isForcedReplenish 
         ? (item.forcedQty || 1) 
-        : Math.max(1, item.minStock - item.stock + 1)
+        : Math.max(1, item.minStock || 1)
     }));
   }, [inventory]);
 
@@ -317,6 +316,15 @@ export default function AutoListsView({
       date: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) + ' • ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       amount: checkedValue,
       items: selectedItems.map(i => i.name).join(', '),
+      detailedItems: selectedItems.map(i => ({
+        id: i.id,
+        name: i.name,
+        brand: i.brand || '-',
+        category: i.category || 'Despensa',
+        quantity: i.quantityNeeded,
+        price: i.price,
+        total: i.price * i.quantityNeeded
+      })),
       count: selectedItems.length,
       icon: 'shopping_cart'
     };
