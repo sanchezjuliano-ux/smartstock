@@ -282,22 +282,40 @@ export default function AutoListsView({
     }
   };
 
-  const toggleCheck = (id: string) => {
-    setCheckedItems(prev => ({ ...prev, [id]: prev[id] === false ? true : false }));
+  const selectedItems = useMemo(() => {
+    return listItems.filter(item => checkedItems[item.id] !== false);
+  }, [listItems, checkedItems]);
+
+  const toggleCheck = (id: string | number) => {
+    const key = String(id);
+    setCheckedItems(prev => ({ ...prev, [key]: prev[key] === false ? true : false }));
+  };
+
+  const toggleAll = () => {
+    const areAllChecked = listItems.length > 0 && listItems.every(i => checkedItems[String(i.id)] !== false);
+    const newChecked: Record<string, boolean> = {};
+    for (const item of listItems) {
+      newChecked[String(item.id)] = !areAllChecked;
+    }
+    setCheckedItems(newChecked);
   };
 
   const handleCheckout = () => {
-    const selectedItems = listItems.filter(item => checkedItems[item.id] !== false);
-    if (selectedItems.length === 0) {
-      alert("Selecione pelo menos um item para concluir.");
+    const itemsToPurchase = listItems.filter(item => checkedItems[String(item.id)] !== false);
+    if (itemsToPurchase.length === 0) {
+      alert("Selecione pelo menos um item marcado (ticado) para concluir a compra.");
       return;
     }
 
     if (setInventory) {
+      const purchasedIds = new Set(itemsToPurchase.map(i => String(i.id)));
+
       const updatedInventory = inventory.map(item => {
-        const selectedItem = selectedItems.find(i => i.id === item.id);
-        if (selectedItem) {
-          const newStock = item.stock + selectedItem.quantityNeeded;
+        // ONLY replenish items that were checked/purchased!
+        if (purchasedIds.has(String(item.id))) {
+          const matching = itemsToPurchase.find(i => String(i.id) === String(item.id));
+          const addedQty = matching ? matching.quantityNeeded : 1;
+          const newStock = item.stock + addedQty;
           return {
             ...item,
             stock: newStock,
@@ -309,18 +327,22 @@ export default function AutoListsView({
             zeroedByInitials: undefined
           };
         }
+        // Unchecked items are untouched and remain with stock = 0 in the replenishment list!
         return item;
       });
+
       setInventory(updatedInventory);
     }
 
+    const totalPurchasedAmount = itemsToPurchase.reduce((acc, curr) => acc + (curr.price * curr.quantityNeeded), 0);
+
     const newItem = {
       id: nextListId++,
-      store: 'Fechamento Automático',
+      store: 'Fechamento de Reposição',
       date: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) + ' • ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      amount: checkedValue,
-      items: selectedItems.map(i => i.name).join(', '),
-      detailedItems: selectedItems.map(i => ({
+      amount: totalPurchasedAmount,
+      items: itemsToPurchase.map(i => i.name).join(', '),
+      detailedItems: itemsToPurchase.map(i => ({
         id: i.id,
         name: i.name,
         brand: i.brand || '-',
@@ -329,11 +351,12 @@ export default function AutoListsView({
         price: i.price,
         total: i.price * i.quantityNeeded
       })),
-      count: selectedItems.length,
-      icon: 'shopping_cart'
+      count: itemsToPurchase.length,
+      icon: 'shopping_bag'
     };
 
     setHistoryItems([newItem, ...historyItems]);
+    setCheckedItems({});
     setActiveTab('history');
   };
 
@@ -479,68 +502,103 @@ export default function AutoListsView({
             {listItems.length === 0 ? (
               <div className="p-8 text-center text-on-surface-variant">
                 <span className="material-symbols-outlined text-4xl mb-2 opacity-50">check_circle</span>
-                <p>Seu estoque está em dia!</p>
+                <p>Seu estoque está em dia! Nenhum item pendente de reposição.</p>
               </div>
             ) : (
-              <div className="divide-y divide-outline-variant/50">
-                {listItems.map((item) => (
-                  <div key={item.id} className={`flex items-center gap-4 p-4 hover:bg-surface-container-low transition-colors ${checkedItems[item.id] === false ? 'opacity-60' : ''}`}>
-                    <button 
-                      onClick={() => toggleCheck(item.id)}
-                      className="flex-shrink-0 text-primary transition-transform active:scale-90"
-                    >
-                      <span className="material-symbols-outlined text-2xl">
-                        {checkedItems[item.id] !== false ? 'check_box' : 'check_box_outline_blank'}
-                      </span>
-                    </button>
-                    
-                    <div className="flex-grow min-w-0">
-                      <h4 className={`font-bold truncate ${checkedItems[item.id] === false ? 'line-through text-on-surface-variant' : 'text-on-surface'}`}>
-                        {item.name}
-                      </h4>
-                      <div className="text-xs font-mono text-outline uppercase truncate mt-0.5 flex items-center gap-1.5">
-                        <span>{item.brand}</span>
-                        <span>•</span>
-                        <span>Sugerido: {item.quantityNeeded} un</span>
-                        {item.isForcedReplenish && (
-                          <span className="bg-secondary/10 text-secondary text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">MANUAL</span>
-                        )}
+              <div>
+                {/* Select / Deselect All Controls */}
+                <div className="flex items-center justify-between px-4 py-2 bg-surface-container-low/60 border-b border-outline-variant text-xs">
+                  <button
+                    type="button"
+                    onClick={toggleAll}
+                    className="inline-flex items-center gap-1.5 font-mono font-bold text-primary hover:underline cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[17px]">
+                      {selectedItems.length === listItems.length ? 'check_box' : selectedItems.length > 0 ? 'indeterminate_check_box' : 'check_box_outline_blank'}
+                    </span>
+                    <span>{selectedItems.length === listItems.length ? 'Desmarcar Todos' : 'Marcar Todos'}</span>
+                  </button>
+                  <span className="font-mono text-on-surface-variant text-[11px]">
+                    <strong className="text-on-surface">{selectedItems.length}</strong> de {listItems.length} ticados
+                  </span>
+                </div>
+
+                <div className="divide-y divide-outline-variant/50">
+                  {listItems.map((item) => {
+                    const isChecked = checkedItems[String(item.id)] !== false;
+                    return (
+                      <div key={item.id} className={`flex items-center gap-4 p-4 hover:bg-surface-container-low transition-colors ${!isChecked ? 'opacity-55 bg-surface-container-lowest/50' : ''}`}>
+                        <button 
+                          type="button"
+                          onClick={() => toggleCheck(item.id)}
+                          className="flex-shrink-0 text-primary transition-transform active:scale-90 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-2xl">
+                            {isChecked ? 'check_box' : 'check_box_outline_blank'}
+                          </span>
+                        </button>
+                        
+                        <div className="flex-grow min-w-0" onClick={() => toggleCheck(item.id)} role="button">
+                          <h4 className={`font-bold truncate cursor-pointer ${!isChecked ? 'line-through text-on-surface-variant' : 'text-on-surface'}`}>
+                            {item.name}
+                          </h4>
+                          <div className="text-xs font-mono text-outline uppercase truncate mt-0.5 flex items-center gap-1.5">
+                            <span>{item.brand}</span>
+                            <span>•</span>
+                            <span>Sugerido: {item.quantityNeeded} un</span>
+                            {item.isForcedReplenish && (
+                              <span className="bg-secondary/10 text-secondary text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">MANUAL</span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-on-surface-variant mt-1.5 flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1 bg-surface-container/60 px-2 py-0.5 rounded-full border border-outline-variant/30 text-[10px]">
+                              <span className="material-symbols-outlined text-[12px] text-primary">person</span>
+                              <span>Indicado por: <strong className="text-on-surface">{item.zeroedBy || 'Maria'}</strong></span>
+                            </span>
+                            <span className="inline-flex items-center gap-1 bg-surface-container/60 px-2 py-0.5 rounded-full border border-outline-variant/30 text-[10px]">
+                              <span className="material-symbols-outlined text-[12px] text-secondary">calendar_month</span>
+                              <span>Em: <strong className="text-on-surface font-mono">{item.zeroedAt || '19/07/2026 10:15'}</strong></span>
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right flex-shrink-0">
+                          <div className="font-mono font-bold text-sm">
+                            R$ {(item.price * item.quantityNeeded).toFixed(2).replace('.', ',')}
+                          </div>
+                          <div className="text-[10px] text-on-surface-variant">
+                            (R$ {item.price.toFixed(2).replace('.', ',')} / un)
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-[10px] text-on-surface-variant mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className="inline-flex items-center gap-1 bg-surface-container/60 px-2 py-0.5 rounded-full border border-outline-variant/30 text-[10px]">
-                          <span className="material-symbols-outlined text-[12px] text-primary">person</span>
-                          <span>Indicado por: <strong className="text-on-surface">{item.zeroedBy || 'Maria'}</strong></span>
-                        </span>
-                        <span className="inline-flex items-center gap-1 bg-surface-container/60 px-2 py-0.5 rounded-full border border-outline-variant/30 text-[10px]">
-                          <span className="material-symbols-outlined text-[12px] text-secondary">calendar_month</span>
-                          <span>Em: <strong className="text-on-surface font-mono">{item.zeroedAt || '19/07/2026 10:15'}</strong></span>
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="text-right flex-shrink-0">
-                      <div className="font-mono font-bold text-sm">
-                        R$ {(item.price * item.quantityNeeded).toFixed(2).replace('.', ',')}
-                      </div>
-                      <div className="text-[10px] text-on-surface-variant">
-                        (R$ {item.price.toFixed(2).replace('.', ',')} / un)
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
           
           {listItems.length > 0 && (
-            <div className="p-4 bg-surface-container-low/30 border-t border-outline-variant flex items-center justify-between mt-auto">
-              <div className="text-sm font-medium">
-                <span className="text-on-surface-variant">Marcados: </span>
-                <span className="font-bold">R$ {checkedValue.toFixed(2).replace('.', ',')}</span>
+            <div className="p-4 bg-surface-container-low/40 border-t border-outline-variant flex flex-col sm:flex-row items-center justify-between gap-3 mt-auto">
+              <div className="text-sm font-medium flex items-center gap-3">
+                <div>
+                  <span className="text-on-surface-variant">Ticados: </span>
+                  <span className="font-bold font-mono">{selectedItems.length} de {listItems.length}</span>
+                </div>
+                <span className="text-outline/60">•</span>
+                <div>
+                  <span className="text-on-surface-variant">Valor: </span>
+                  <span className="font-bold font-mono text-primary text-base">R$ {checkedValue.toFixed(2).replace('.', ',')}</span>
+                </div>
               </div>
-              <button onClick={handleCheckout} className="bg-primary text-on-primary px-4 py-2 rounded-xl font-bold shadow hover:shadow-md transition-all active:scale-95 text-sm flex items-center gap-2">
+              <button 
+                type="button"
+                onClick={handleCheckout} 
+                disabled={selectedItems.length === 0}
+                className="w-full sm:w-auto bg-primary text-on-primary disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 text-sm flex items-center justify-center gap-2 cursor-pointer"
+              >
                 <span className="material-symbols-outlined text-[18px]">shopping_bag</span>
-                Concluir
+                <span>Concluir Compra ({selectedItems.length})</span>
               </button>
             </div>
           )}
