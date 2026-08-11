@@ -603,12 +603,23 @@ export default function AddItemModal({
                         disabled={isProcessing}
                         className="w-full bg-surface border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary rounded-lg px-4 py-3 outline-none transition-all text-sm appearance-none disabled:opacity-50"
                       >
-                        <option value="Despensa">Despensa</option>
-                        <option value="Limpeza">Limpeza</option>
-                        <option value="Higiene">Higiene</option>
-                        {customCategories.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
+                        {(() => {
+                          const rawList = ['Despensa', 'Limpeza', 'Higiene', ...customCategories, ...(inventory || []).map((i: any) => i.category).filter(Boolean)];
+                          const distinct: string[] = [];
+                          const seen = new Set<string>();
+                          for (const cat of rawList) {
+                            if (!cat) continue;
+                            const trimmed = String(cat).trim();
+                            const lower = trimmed.toLowerCase();
+                            if (!seen.has(lower)) {
+                              seen.add(lower);
+                              distinct.push(trimmed);
+                            }
+                          }
+                          return distinct.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ));
+                        })()}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-on-surface-variant">
                         <span className="material-symbols-outlined text-[18px]">expand_more</span>

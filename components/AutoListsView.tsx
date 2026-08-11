@@ -856,14 +856,23 @@ export default function AutoListsView({
                             onChange={(e) => setNewCategory(e.target.value)}
                             className="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-3 outline-none text-sm transition-all focus:border-primary"
                           >
-                            <option value="Despensa">Despensa</option>
-                            <option value="Limpeza">Limpeza</option>
-                            <option value="Higiene">Higiene</option>
-                            <option value="Bebidas">Bebidas</option>
-                            <option value="Frios">Frios</option>
-                            {customCategories.map(cat => (
-                              <option key={cat} value={cat}>{cat}</option>
-                            ))}
+                            {(() => {
+                              const rawList = ['Despensa', 'Limpeza', 'Higiene', 'Bebidas', 'Frios', ...customCategories, ...(inventory || []).map((i: any) => i.category).filter(Boolean)];
+                              const distinct: string[] = [];
+                              const seen = new Set<string>();
+                              for (const cat of rawList) {
+                                if (!cat) continue;
+                                const trimmed = String(cat).trim();
+                                const lower = trimmed.toLowerCase();
+                                if (!seen.has(lower)) {
+                                  seen.add(lower);
+                                  distinct.push(trimmed);
+                                }
+                              }
+                              return distinct.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                              ));
+                            })()}
                           </select>
                         )}
                       </div>

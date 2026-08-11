@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { INVENTORY } from '@/lib/data';
 import AddItemModal from './AddItemModal';
@@ -16,7 +16,7 @@ function ProductCard({
   item: any, 
   viewMode: 'grid' | 'list',
   onUpdateStock: (id: number, delta: number) => void,
-  onUpdatePortions: (id: number, delta: number) => void,
+  onUpdatePortions?: (id: number, delta: number) => void,
   onEdit: (item: any) => void,
   onDelete: (id: number) => void
 }) {
@@ -54,52 +54,22 @@ function ProductCard({
           <p className="text-[10px] font-mono font-medium text-outline uppercase truncate mb-1">{item.brand}{item.subcategory ? ` • ${item.subcategory}` : ''}</p>
           <div className="flex gap-4">
             <span className={`text-xs font-mono font-medium ${isLowStock ? 'text-error' : ''}`}>
-              R$ {item.price.toFixed(2).replace('.', ',')}
+              R$ {item.price ? item.price.toFixed(2).replace('.', ',') : '0,00'}
             </span>
             <span className="text-xs text-on-surface-variant italic">Val: {item.validity}</span>
           </div>
         </div>
         
-        {/* Stock and Portion Controls */}
-        <div className="flex items-center gap-2 ml-auto shrink-0 flex-wrap justify-end">
-          {item.isPortioned && (
-            <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1">
-              <span className="material-symbols-outlined text-[15px] text-primary">pie_chart</span>
-              <div className="flex flex-col">
-                <span className="text-[9px] font-mono text-primary font-bold uppercase tracking-wider">Porções</span>
-                <span className="text-xs font-bold text-on-surface">
-                  {item.currentPortions ?? 0} {item.currentPortions === 1 ? 'porção' : 'porções'}
-                </span>
-              </div>
-              <button 
-                onClick={() => onUpdatePortions(item.id, -1)}
-                disabled={!item.currentPortions || item.currentPortions <= 0}
-                className="ml-1 p-1 bg-surface-container-lowest border border-outline-variant hover:bg-error/10 hover:text-error text-on-surface-variant rounded transition-colors active:scale-95 disabled:opacity-30 cursor-pointer flex items-center shadow-sm"
-                title="-1 Porção"
-              >
-                <span className="material-symbols-outlined text-[13px]">remove</span>
-              </button>
-              <button 
-                onClick={() => onUpdatePortions(item.id, 1)}
-                className="p-1 bg-surface-container-lowest border border-outline-variant hover:bg-primary/10 hover:text-primary text-on-surface-variant rounded transition-colors active:scale-95 cursor-pointer flex items-center shadow-sm"
-                title="+1 Porção"
-              >
-                <span className="material-symbols-outlined text-[13px]">add</span>
-              </button>
-            </div>
-          )}
-
-          <div className={`flex items-center justify-between rounded-lg p-1 border flex-shrink-0 ${isLowStock ? 'bg-error-container/20 border-error-container' : 'bg-surface-container-low border-outline-variant'}`}>
-            <button onClick={() => onUpdateStock(item.id, -1)} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
-              <span className={`material-symbols-outlined text-sm ${isLowStock ? 'text-error' : ''}`}>remove</span>
-            </button>
-            <span className={`text-sm font-mono font-medium w-8 text-center ${isLowStock ? 'text-error' : ''}`}>
-              {item.stock} un
-            </span>
-            <button onClick={() => onUpdateStock(item.id, 1)} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
-              <span className={`material-symbols-outlined text-sm ${isLowStock ? 'text-error' : ''}`}>add</span>
-            </button>
-          </div>
+        <div className={`flex items-center justify-between rounded-lg p-1 border flex-shrink-0 ${isLowStock ? 'bg-error-container/20 border-error-container' : 'bg-surface-container-low border-outline-variant'}`}>
+          <button onClick={() => onUpdateStock(item.id, -1)} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
+            <span className={`material-symbols-outlined text-sm ${isLowStock ? 'text-error' : ''}`}>remove</span>
+          </button>
+          <span className={`text-sm font-mono font-medium w-6 text-center ${isLowStock ? 'text-error' : ''}`}>
+            {item.stock}
+          </span>
+          <button onClick={() => onUpdateStock(item.id, 1)} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
+            <span className={`material-symbols-outlined text-sm ${isLowStock ? 'text-error' : ''}`}>add</span>
+          </button>
         </div>
       </div>
     );
@@ -132,49 +102,17 @@ function ProductCard({
         <h4 className="text-base font-bold">{item.name}</h4>
         <div className="flex justify-between items-center mt-1">
           <span className={`text-sm font-mono font-medium ${isLowStock ? 'text-error' : ''}`}>
-            R$ {item.price.toFixed(2).replace('.', ',')}
+            R$ {item.price ? item.price.toFixed(2).replace('.', ',') : '0,00'}
           </span>
           <span className="text-sm text-on-surface-variant italic">Val: {item.validity}</span>
         </div>
       </div>
-      {item.isPortioned && (
-        <div className="bg-primary/10 border border-primary/20 rounded-xl p-2.5 flex items-center justify-between gap-2 mt-auto">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">pie_chart</span>
-              Porções
-            </span>
-            <span className="text-xs font-extrabold text-on-surface">
-              {item.currentPortions ?? 0} {item.currentPortions === 1 ? 'porção' : 'porções'}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => onUpdatePortions(item.id, -1)}
-              disabled={!item.currentPortions || item.currentPortions <= 0}
-              className="px-2 py-1 bg-surface-container-lowest border border-outline-variant/80 hover:bg-error/10 hover:border-error/30 text-error rounded-lg text-xs font-bold transition-all active:scale-95 disabled:opacity-40 cursor-pointer flex items-center gap-1 shadow-sm"
-              title="Diminuir 1 porção"
-            >
-              <span className="material-symbols-outlined text-[14px]">remove</span>
-              <span className="text-[10px] font-mono font-bold">Porção</span>
-            </button>
-            <button
-              onClick={() => onUpdatePortions(item.id, 1)}
-              className="p-1.5 bg-surface-container-lowest border border-outline-variant/80 hover:bg-primary/10 hover:border-primary/30 text-primary rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-sm"
-              title="Adicionar 1 porção"
-            >
-              <span className="material-symbols-outlined text-[14px]">add</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className={`flex items-center justify-between rounded-lg p-1 border ${!item.isPortioned ? 'mt-auto' : ''} ${isLowStock ? 'bg-error-container/20 border-error-container' : 'bg-surface-container-low border-outline-variant'}`}>
+      <div className={`flex items-center justify-between rounded-lg p-1 border mt-auto ${isLowStock ? 'bg-error-container/20 border-error-container' : 'bg-surface-container-low border-outline-variant'}`}>
         <button onClick={() => onUpdateStock(item.id, -1)} className={`w-10 h-10 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
           <span className={`material-symbols-outlined ${isLowStock ? 'text-error' : ''}`}>remove</span>
         </button>
-        <span className={`text-sm font-mono font-bold w-12 text-center ${isLowStock ? 'text-error' : ''}`}>
-          {item.stock} un
+        <span className={`text-xl font-mono font-medium w-8 text-center ${isLowStock ? 'text-error' : ''}`}>
+          {item.stock}
         </span>
         <button onClick={() => onUpdateStock(item.id, 1)} className={`w-10 h-10 flex items-center justify-center rounded-md transition-colors ${isLowStock ? 'hover:bg-error-container' : 'hover:bg-surface-variant'}`}>
           <span className={`material-symbols-outlined ${isLowStock ? 'text-error' : ''}`}>add</span>
@@ -199,7 +137,7 @@ function CategorySection({
   items: any[], 
   viewMode: 'grid' | 'list',
   onUpdateStock: (id: number, delta: number) => void,
-  onUpdatePortions: (id: number, delta: number) => void,
+  onUpdatePortions?: (id: number, delta: number) => void,
   onEdit: (item: any) => void,
   onDelete: (id: number) => void
 }) {
@@ -230,6 +168,18 @@ function CategorySection({
       </div>
     </section>
   );
+}
+
+function getCategoryIcon(categoryName: string): string {
+  const cat = (categoryName || '').toLowerCase().trim();
+  if (cat.includes('despensa') || cat.includes('alimento') || cat.includes('comida')) return 'kitchen';
+  if (cat.includes('higiene') || cat.includes('banho') || cat.includes('beleza') || cat.includes('maquiagem')) return 'sanitizer';
+  if (cat.includes('limpeza') || cat.includes('lavanderia')) return 'cleaning_services';
+  if (cat.includes('bebida') || cat.includes('drink')) return 'local_drink';
+  if (cat.includes('frio') || cat.includes('congelado') || cat.includes('carne')) return 'ac_unit';
+  if (cat.includes('hortifruti') || cat.includes('fruta') || cat.includes('verdura')) return 'eco';
+  if (cat.includes('padaria') || cat.includes('pao')) return 'bakery_dining';
+  return 'category';
 }
 
 export default function InventoryView({ 
@@ -265,40 +215,107 @@ export default function InventoryView({
   setSelectedFile?: (file: File | null) => void,
   setEditingItem?: (item: any) => void,
   stockFilter?: 'all' | 'low' | 'out' | 'low_or_out' | 'in_stock' | 'expiring',
-  setStockFilter?: (filter: any) => void,
+  setStockFilter?: (filter: 'all' | 'low' | 'out' | 'low_or_out' | 'in_stock' | 'expiring') => void,
   sortBy?: 'name_asc' | 'name_desc' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc',
   onClearFilters?: () => void
 }) {
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
+
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // 1. Strict deduplication of inventory items
+  const uniqueInventory = useMemo(() => {
+    if (!Array.isArray(inventory)) return [];
+    const seenIds = new Set<string>();
+    const seenNames = new Set<string>();
+    const result: any[] = [];
+    for (const item of inventory) {
+      if (!item) continue;
+      const idKey = item.id !== undefined && item.id !== null ? String(item.id) : null;
+      const nameKey = `${(item.name || '').trim().toLowerCase()}_${(item.brand || '').trim().toLowerCase()}_${(item.category || '').trim().toLowerCase()}`;
+      if (idKey && seenIds.has(idKey)) continue;
+      if (seenNames.has(nameKey)) continue;
+      if (idKey) seenIds.add(idKey);
+      seenNames.add(nameKey);
+      result.push(item);
+    }
+    return result;
+  }, [inventory]);
+
+  // 2. Extract distinct categories (preserving standard order, strictly no duplicates)
+  const distinctCategories = useMemo(() => {
+    const rawList = [
+      'Despensa',
+      'Higiene',
+      'Limpeza',
+      ...customCategories,
+      ...uniqueInventory.map(i => i.category).filter(Boolean)
+    ];
+    const result: string[] = [];
+    const seenLower = new Set<string>();
+    for (const cat of rawList) {
+      if (!cat) continue;
+      const trimmed = String(cat).trim();
+      const lower = trimmed.toLowerCase();
+      if (!seenLower.has(lower)) {
+        seenLower.add(lower);
+        result.push(trimmed);
+      }
+    }
+    return result;
+  }, [customCategories, uniqueInventory]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, mode: 'barcode' | 'photo') => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile?.(e.target.files[0]);
+      setModalMode?.(mode);
+      setIsModalOpen?.(true);
+      e.target.value = '';
+    }
+  };
+
+  const handleAddCategory = () => {
+    const trimmed = newCategoryName.trim();
+    if (trimmed && !distinctCategories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      setCustomCategories([...customCategories, trimmed]);
+      setNewCategoryName('');
+      setNewSubcategoryName('');
+      setIsCategoryModalOpen(false);
+    }
+  };
+
   const handleUpdateStock = (id: number, delta: number) => {
-    setInventory(inventory.map(item => {
+    setInventory(uniqueInventory.map(item => {
       if (item.id === id) {
         const newStock = Math.max(0, item.stock + delta);
         const newStatus = newStock <= item.minStock ? (newStock === 0 ? 'ESGOTADO' : 'ESTOQUE BAIXO') : 'EM ESTOQUE';
+        const isNowZero = newStock === 0 && item.stock > 0;
         
-        let portionUpdates = {};
-        if (item.isPortioned) {
-          const ppu = item.portionsPerUnit || 1;
-          portionUpdates = {
-            currentPortions: newStock * ppu
-          };
-        }
+        const zeroInfo = isNowZero ? {
+          zeroedBy: user?.name || 'Despensa Compartilhada',
+          zeroedByInitials: (user?.name || 'Despensa Compartilhada').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+          zeroedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        } : {};
 
-        const updateInfo = (newStock === 0 && item.stock !== 0 && user) 
-          ? { 
-              zeroedBy: user.name || 'Despensa Compartilhada', 
-              zeroedByInitials: (user.name || 'Despensa Compartilhada').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
-              zeroedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-            } 
-          : {};
-
-        return { ...item, stock: newStock, status: newStatus, ...portionUpdates, ...updateInfo };
+        return { 
+          ...item, 
+          stock: newStock, 
+          status: newStatus,
+          isForcedReplenish: isNowZero ? false : item.isForcedReplenish,
+          ...zeroInfo
+        };
       }
       return item;
     }));
   };
 
   const handleUpdatePortions = (id: number, delta: number) => {
-    setInventory(inventory.map(item => {
+    setInventory(uniqueInventory.map(item => {
       if (item.id === id) {
         const currentPortions = item.currentPortions !== undefined
           ? item.currentPortions
@@ -338,14 +355,14 @@ export default function InventoryView({
 
   const handleDelete = (id: number) => {
     if (confirm("Deseja realmente excluir este produto?")) {
-      setInventory(inventory.filter(i => i.id !== id));
+      setInventory(uniqueInventory.filter(i => i.id !== id));
     }
   };
 
   const filterItems = (items: any[]) => {
     let filtered = items.filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            item.brand.toLowerCase().includes(searchQuery.toLowerCase());
+                            (item.brand && item.brand.toLowerCase().includes(searchQuery.toLowerCase()));
       
       let matchesStock = true;
       if (stockFilter === 'low') {
@@ -364,10 +381,10 @@ export default function InventoryView({
             let y = parseInt(parts[1], 10);
             if (y < 100) y += 2000;
             const itemDate = new Date(y, m - 1, 1);
-            const currentDate = new Date(2026, 6, 19); // local time July 2026
+            const currentDate = new Date(2026, 6, 19);
             const diffTime = itemDate.getTime() - currentDate.getTime();
             const diffMonths = diffTime / (1000 * 60 * 60 * 24 * 30);
-            matchesStock = diffMonths <= 6; // expired or within 6 months
+            matchesStock = diffMonths <= 6;
           } else {
             matchesStock = false;
           }
@@ -378,7 +395,7 @@ export default function InventoryView({
         matchesStock = showLowStockOnly ? (item.status === 'ESTOQUE BAIXO' || item.status === 'ESGOTADO') : true;
       }
       
-      const matchesCategory = selectedCategoryFilter === '' || item.category === selectedCategoryFilter;
+      const matchesCategory = selectedCategoryFilter === '' || (item.category || '').toLowerCase() === selectedCategoryFilter.toLowerCase();
       return matchesSearch && matchesStock && matchesCategory;
     });
 
@@ -388,13 +405,13 @@ export default function InventoryView({
       } else if (sortBy === 'name_desc') {
         return b.name.localeCompare(a.name);
       } else if (sortBy === 'price_asc') {
-        return a.price - b.price;
+        return (a.price || 0) - (b.price || 0);
       } else if (sortBy === 'price_desc') {
-        return b.price - a.price;
+        return (b.price || 0) - (a.price || 0);
       } else if (sortBy === 'stock_asc') {
-        return a.stock - b.stock;
+        return (a.stock || 0) - (b.stock || 0);
       } else if (sortBy === 'stock_desc') {
-        return b.stock - a.stock;
+        return (b.stock || 0) - (a.stock || 0);
       }
       return 0;
     });
@@ -402,51 +419,31 @@ export default function InventoryView({
     return filtered;
   };
 
-  // Currently we use a static INVENTORY, if we want custom categories to be populated with items, 
-  // we would need a global state for items too. For this prototype, custom categories will just be empty initially.
-  // We will just filter the built-in ones.
-  const despensa = filterItems(inventory.filter(i => i.category === 'Despensa'));
-  const higiene = filterItems(inventory.filter(i => i.category === 'Higiene'));
-  const limpeza = filterItems(inventory.filter(i => i.category === 'Limpeza'));
+  // 3. Dynamic category grouping: EACH category is rendered ONLY ONCE!
+  const filteredCategoriesWithItems = useMemo(() => {
+    return distinctCategories.map(cat => {
+      const catItems = filterItems(
+        uniqueInventory.filter(i => (i.category || 'Despensa').trim().toLowerCase() === cat.toLowerCase())
+      );
+      return {
+        category: cat,
+        icon: getCategoryIcon(cat),
+        items: catItems
+      };
+    }).filter(group => group.items.length > 0);
+  }, [distinctCategories, uniqueInventory, searchQuery, stockFilter, selectedCategoryFilter, sortBy, showLowStockOnly]);
 
-  const totalFilteredCount = despensa.length + higiene.length + limpeza.length + 
-    customCategories.reduce((acc, cat) => acc + filterItems(inventory.filter(i => i.category === cat)).length, 0);
-
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newSubcategoryName, setNewSubcategoryName] = useState('');
-
-  const barcodeInputRef = useRef<HTMLInputElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, mode: 'barcode' | 'photo') => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile?.(e.target.files[0]);
-      setModalMode?.(mode);
-      setIsModalOpen?.(true);
-      // Reset input value to allow selecting the same file again
-      e.target.value = '';
-    }
-  };
-
-  const handleAddCategory = () => {
-    if (newCategoryName.trim() && !customCategories.includes(newCategoryName.trim())) {
-      setCustomCategories([...customCategories, newCategoryName.trim()]);
-      setNewCategoryName('');
-      setNewSubcategoryName('');
-      setIsCategoryModalOpen(false);
-    }
-  };
+  const totalFilteredCount = useMemo(() => {
+    return filteredCategoriesWithItems.reduce((sum, g) => sum + g.items.length, 0);
+  }, [filteredCategoriesWithItems]);
 
   // Dashboard calculation variables
-  const totalUnique = inventory.length;
-  const totalUnits = inventory.reduce((sum, item) => sum + (item.stock || 0), 0);
-  const totalValue = inventory.reduce((sum, item) => sum + ((item.price || 0) * (item.stock || 0)), 0);
-  const criticalItemsCount = inventory.filter(item => item.status === 'ESTOQUE BAIXO' || item.status === 'ESGOTADO').length;
+  const totalUnique = uniqueInventory.length;
+  const totalUnits = uniqueInventory.reduce((sum, item) => sum + (item.stock || 0), 0);
+  const totalValue = uniqueInventory.reduce((sum, item) => sum + ((item.price || 0) * (item.stock || 0)), 0);
+  const criticalItemsCount = uniqueInventory.filter(item => item.status === 'ESTOQUE BAIXO' || item.status === 'ESGOTADO').length;
   
-  const expiringSoonCount = inventory.filter(item => {
+  const expiringSoonCount = uniqueInventory.filter(item => {
     if (item.validity && item.validity !== '-') {
       const parts = item.validity.split('/');
       if (parts.length === 2) {
@@ -454,7 +451,7 @@ export default function InventoryView({
         let y = parseInt(parts[1], 10);
         if (y < 100) y += 2000;
         const itemDate = new Date(y, m - 1, 1);
-        const currentDate = new Date(2026, 6, 19); // Local time July 19, 2026
+        const currentDate = new Date(2026, 6, 19);
         const diffTime = itemDate.getTime() - currentDate.getTime();
         const diffMonths = diffTime / (1000 * 60 * 60 * 24 * 30);
         return diffMonths <= 6;
@@ -563,20 +560,20 @@ export default function InventoryView({
             }
           }}
           className={`p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between shadow-sm bg-surface-container-lowest hover:bg-surface-container-low hover:border-error/40 ${
-            stockFilter === 'low_or_out' ? 'border-error ring-1 ring-error/20 bg-error/5' : 'border-outline-variant/60'
+            stockFilter === 'low_or_out' || showLowStockOnly ? 'border-error ring-1 ring-error/20' : 'border-outline-variant/60'
           }`}
         >
           <div className="space-y-1">
-            <span className="text-[10px] font-mono font-bold text-on-surface-variant uppercase tracking-wider block text-left">Estoque Crítico</span>
+            <span className="text-[10px] font-mono font-bold text-error uppercase tracking-wider block text-left">Estoque Crítico</span>
             <div className="text-3xl font-extrabold tracking-tight font-sans text-error text-left">{criticalItemsCount}</div>
             <span className="text-[11px] text-outline block text-left">Itens abaixo do mínimo</span>
           </div>
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${criticalItemsCount > 0 ? 'bg-error/10 text-error animate-pulse' : 'bg-secondary/10 text-secondary'}`}>
-            <span className="material-symbols-outlined text-2xl">{criticalItemsCount > 0 ? 'warning' : 'check_circle'}</span>
+          <div className="w-12 h-12 rounded-xl bg-error-container/40 flex items-center justify-center text-error">
+            <span className="material-symbols-outlined text-2xl">warning</span>
           </div>
         </div>
 
-        {/* Metric Card 3: Expiring soon */}
+        {/* Metric Card 3: Expiring Soon */}
         <div 
           onClick={() => {
             if (setStockFilter && setShowLowStockOnly) {
@@ -584,17 +581,17 @@ export default function InventoryView({
               setShowLowStockOnly(false);
             }
           }}
-          className={`p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between shadow-sm bg-surface-container-lowest hover:bg-surface-container-low hover:border-amber-500/40 ${
-            stockFilter === 'expiring' ? 'border-amber-500 ring-1 ring-amber-500/20 bg-amber-50/20' : 'border-outline-variant/60'
+          className={`p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between shadow-sm bg-surface-container-lowest hover:bg-surface-container-low hover:border-secondary/40 ${
+            stockFilter === 'expiring' ? 'border-secondary ring-1 ring-secondary/20' : 'border-outline-variant/60'
           }`}
         >
           <div className="space-y-1">
-            <span className="text-[10px] font-mono font-bold text-on-surface-variant uppercase tracking-wider block text-left">Vencimento Próximo</span>
-            <div className="text-3xl font-extrabold tracking-tight font-sans text-amber-600 text-left">{expiringSoonCount} <span className="text-xs font-medium text-outline">itens</span></div>
-            <span className="text-[11px] text-outline block text-left">Vencendo nos prox. 6 meses</span>
+            <span className="text-[10px] font-mono font-bold text-secondary uppercase tracking-wider block text-left">Vencimento Próximo</span>
+            <div className="text-3xl font-extrabold tracking-tight font-sans text-secondary text-left">{expiringSoonCount} <span className="text-xs font-medium text-outline">itens</span></div>
+            <span className="text-[11px] text-outline block text-left">Vencendo nos próx. 6 meses</span>
           </div>
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${expiringSoonCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-secondary/10 text-secondary'}`}>
-            <span className="material-symbols-outlined text-2xl">running_with_errors</span>
+          <div className="w-12 h-12 rounded-xl bg-secondary-container/40 flex items-center justify-center text-secondary">
+            <span className="material-symbols-outlined text-2xl">update</span>
           </div>
         </div>
 
@@ -634,17 +631,21 @@ export default function InventoryView({
           )}
         </div>
       ) : (
-        <>
-          <CategorySection title="Despensa" icon="kitchen" items={despensa} viewMode={viewMode} onUpdateStock={handleUpdateStock} onUpdatePortions={handleUpdatePortions} onDelete={handleDelete} onEdit={handleEdit} />
-          
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <CategorySection title="Higiene" icon="sanitizer" items={higiene} viewMode={viewMode} onUpdateStock={handleUpdateStock} onUpdatePortions={handleUpdatePortions} onDelete={handleDelete} onEdit={handleEdit} />
-            <CategorySection title="Limpeza" icon="cleaning_services" items={limpeza} viewMode={viewMode} onUpdateStock={handleUpdateStock} onUpdatePortions={handleUpdatePortions} onDelete={handleDelete} onEdit={handleEdit} />
-            {customCategories.map(cat => (
-               <CategorySection key={cat} title={cat} icon="category" items={filterItems(inventory.filter(i => i.category === cat))} viewMode={viewMode} onUpdateStock={handleUpdateStock} onUpdatePortions={handleUpdatePortions} onDelete={handleDelete} onEdit={handleEdit} />
-            ))}
-          </div>
-        </>
+        <div className="space-y-8">
+          {filteredCategoriesWithItems.map(group => (
+            <CategorySection 
+              key={group.category} 
+              title={group.category} 
+              icon={group.icon} 
+              items={group.items} 
+              viewMode={viewMode} 
+              onUpdateStock={handleUpdateStock} 
+              onUpdatePortions={handleUpdatePortions} 
+              onDelete={handleDelete} 
+              onEdit={handleEdit} 
+            />
+          ))}
+        </div>
       )}
 
       {/* Category Modal */}
@@ -683,14 +684,14 @@ export default function InventoryView({
                   setNewSubcategoryName('');
                   setIsCategoryModalOpen(false);
                 }}
-                className="px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors text-xs font-bold uppercase tracking-wider"
+                className="px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors text-xs font-bold uppercase tracking-wider cursor-pointer"
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleAddCategory}
                 disabled={!newCategoryName.trim()}
-                className="px-4 py-2 bg-primary text-on-primary rounded-lg font-bold text-xs uppercase tracking-wider hover:opacity-90 disabled:opacity-50 transition-all"
+                className="px-4 py-2 bg-primary text-on-primary rounded-lg font-bold text-xs uppercase tracking-wider hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer"
               >
                 Criar Categoria
               </button>

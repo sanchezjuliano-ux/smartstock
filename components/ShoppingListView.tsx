@@ -267,26 +267,35 @@ export default function ShoppingListView() {
                  <div className="space-y-1.5">
                    <span className="text-[10px] font-mono font-bold text-on-surface-variant uppercase tracking-wider block text-left">Categoria</span>
                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
-                     {[
-                       { value: '', label: 'Todas' },
-                       { value: 'Despensa', label: 'Despensa' },
-                       { value: 'Higiene', label: 'Higiene' },
-                       { value: 'Limpeza', label: 'Limpeza' },
-                       ...customCategories.map(cat => ({ value: cat, label: cat }))
-                     ].map((opt) => (
-                       <button
-                         key={opt.value}
-                         onClick={() => setSelectedCategoryFilter(opt.value)}
-                         className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                           selectedCategoryFilter === opt.value
-                             ? 'bg-secondary text-on-secondary border-secondary'
-                             : 'border-outline-variant/60 hover:bg-surface-container-high text-on-surface-variant'
-                         }`}
-                       >
-                         {opt.label}
-                       </button>
-                     ))}
-                   </div>
+                      {(() => {
+                        const rawList = ['Despensa', 'Higiene', 'Limpeza', ...customCategories, ...inventory.map((i: any) => i.category).filter(Boolean)];
+                        const distinct: string[] = [];
+                        const seen = new Set<string>();
+                        for (const cat of rawList) {
+                          if (!cat) continue;
+                          const trimmed = String(cat).trim();
+                          const lower = trimmed.toLowerCase();
+                          if (!seen.has(lower)) {
+                            seen.add(lower);
+                            distinct.push(trimmed);
+                          }
+                        }
+                        const opts = [{ value: '', label: 'Todas' }, ...distinct.map(cat => ({ value: cat, label: cat }))];
+                        return opts.map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => setSelectedCategoryFilter(opt.value)}
+                            className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                              selectedCategoryFilter === opt.value
+                                ? 'bg-secondary text-on-secondary border-secondary'
+                                : 'border-outline-variant/60 hover:bg-surface-container-high text-on-surface-variant'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ));
+                      })()}
+                    </div>
                  </div>
 
                  {/* Sorting */}
