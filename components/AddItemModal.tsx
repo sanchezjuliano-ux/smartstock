@@ -13,6 +13,8 @@ interface AddItemModalProps {
   setMode?: (mode: 'barcode' | 'photo' | 'manual' | null) => void;
   customCategories?: string[];
   setCustomCategories?: any;
+  customSubcategories?: string[];
+  setCustomSubcategories?: any;
   editingItem?: any;
   inventory?: any[];
   setInventory?: (inventory: any[]) => void;
@@ -61,6 +63,8 @@ export default function AddItemModal({
   setMode, 
   customCategories = [],
   setCustomCategories,
+  customSubcategories = [],
+  setCustomSubcategories,
   editingItem,
   inventory,
   setInventory,
@@ -642,9 +646,23 @@ export default function AddItemModal({
                     className="w-full bg-surface border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary rounded-lg px-4 py-3 outline-none transition-all text-sm disabled:opacity-50"
                   />
                   <datalist id="subcategories-datalist">
-                    {Array.from(new Set((inventory || []).map((i: any) => i.subcategory).filter(Boolean))).map((sub: any) => (
-                      <option key={sub} value={sub} />
-                    ))}
+                    {(() => {
+                      const rawList = [...customSubcategories, ...(inventory || []).map((i: any) => i.subcategory).filter(Boolean)];
+                      const distinct: string[] = [];
+                      const seen = new Set<string>();
+                      for (const s of rawList) {
+                        if (!s) continue;
+                        const trimmed = String(s).trim();
+                        const lower = trimmed.toLowerCase();
+                        if (!seen.has(lower)) {
+                          seen.add(lower);
+                          distinct.push(trimmed);
+                        }
+                      }
+                      return distinct.map(sub => (
+                        <option key={sub} value={sub} />
+                      ));
+                    })()}
                   </datalist>
                 </div>
                 
@@ -904,6 +922,28 @@ export default function AddItemModal({
                       image: imagePreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200&h=200',
                       ...updateInfo
                     }]);
+                  }
+
+                  // Automatically register new category for future items
+                  const catToSave = formData.category?.trim();
+                  if (catToSave && setCustomCategories) {
+                    setCustomCategories((prev: string[]) => {
+                      if (!prev.some(c => c.toLowerCase() === catToSave.toLowerCase())) {
+                        return [...prev, catToSave];
+                      }
+                      return prev;
+                    });
+                  }
+
+                  // Automatically register new subcategory for future items
+                  const subToSave = formData.subcategory?.trim();
+                  if (subToSave && setCustomSubcategories) {
+                    setCustomSubcategories((prev: string[]) => {
+                      if (!prev.some(s => s.toLowerCase() === subToSave.toLowerCase())) {
+                        return [...prev, subToSave];
+                      }
+                      return prev;
+                    });
                   }
                 }
                 handleClose();

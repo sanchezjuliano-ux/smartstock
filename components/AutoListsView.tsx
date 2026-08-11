@@ -14,7 +14,9 @@ export default function AutoListsView({
   setActiveTab,
   user,
   customCategories = [],
-  setCustomCategories
+  setCustomCategories,
+  customSubcategories = [],
+  setCustomSubcategories
 }: { 
   inventory: any[],
   setInventory?: (inv: any[]) => void,
@@ -23,7 +25,9 @@ export default function AutoListsView({
   setActiveTab: (tab: 'inventory' | 'history' | 'lists') => void,
   user?: any,
   customCategories?: string[],
-  setCustomCategories?: any
+  setCustomCategories?: any,
+  customSubcategories?: string[],
+  setCustomSubcategories?: any
 }) {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 
@@ -391,6 +395,28 @@ export default function AutoListsView({
       };
       
       setInventory([...inventory, newItem]);
+
+      // Automatically register new category for future items
+      const catToSave = newCategory.trim();
+      if (catToSave && setCustomCategories) {
+        setCustomCategories((prev: string[]) => {
+          if (!prev.some(c => c.toLowerCase() === catToSave.toLowerCase())) {
+            return [...prev, catToSave];
+          }
+          return prev;
+        });
+      }
+
+      // Automatically register new subcategory for future items
+      const subToSave = newSubcategory.trim();
+      if (subToSave && setCustomSubcategories) {
+        setCustomSubcategories((prev: string[]) => {
+          if (!prev.some(s => s.toLowerCase() === subToSave.toLowerCase())) {
+            return [...prev, subToSave];
+          }
+          return prev;
+        });
+      }
     }
     
     resetForm();
@@ -889,11 +915,31 @@ export default function AutoListsView({
                         <label className="text-[11px] font-mono font-bold text-on-surface-variant uppercase block">Subcategoria (Opcional)</label>
                         <input
                           type="text"
+                          list="autolist-subcategories-datalist"
                           value={newSubcategory}
                           onChange={(e) => setNewSubcategory(e.target.value)}
                           placeholder="Ex: Laticínios, Enlatados..."
                           className="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-3 outline-none text-sm transition-all focus:border-primary"
                         />
+                        <datalist id="autolist-subcategories-datalist">
+                          {(() => {
+                            const rawList = [...customSubcategories, ...(inventory || []).map((i: any) => i.subcategory).filter(Boolean)];
+                            const distinct: string[] = [];
+                            const seen = new Set<string>();
+                            for (const s of rawList) {
+                              if (!s) continue;
+                              const trimmed = String(s).trim();
+                              const lower = trimmed.toLowerCase();
+                              if (!seen.has(lower)) {
+                                seen.add(lower);
+                                distinct.push(trimmed);
+                              }
+                            }
+                            return distinct.map(sub => (
+                              <option key={sub} value={sub} />
+                            ));
+                          })()}
+                        </datalist>
                       </div>
 
                       <div className="space-y-1">

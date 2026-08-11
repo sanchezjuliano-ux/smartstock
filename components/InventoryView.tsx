@@ -191,6 +191,8 @@ export default function InventoryView({
   setShowLowStockOnly = () => {},
   customCategories = [],
   setCustomCategories = () => {},
+  customSubcategories = [],
+  setCustomSubcategories = () => {},
   selectedCategoryFilter = '',
   setIsModalOpen,
   setModalMode,
@@ -209,6 +211,8 @@ export default function InventoryView({
   setShowLowStockOnly?: (show: boolean) => void,
   customCategories?: string[],
   setCustomCategories?: (categories: string[]) => void,
+  customSubcategories?: string[],
+  setCustomSubcategories?: (subcategories: string[]) => void,
   selectedCategoryFilter?: string,
   setIsModalOpen?: (isOpen: boolean) => void,
   setModalMode?: (mode: 'barcode' | 'photo' | 'manual' | null) => void,
@@ -280,13 +284,24 @@ export default function InventoryView({
   };
 
   const handleAddCategory = () => {
-    const trimmed = newCategoryName.trim();
-    if (trimmed && !distinctCategories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
-      setCustomCategories([...customCategories, trimmed]);
-      setNewCategoryName('');
-      setNewSubcategoryName('');
-      setIsCategoryModalOpen(false);
+    const trimmedCat = newCategoryName.trim();
+    const trimmedSub = newSubcategoryName.trim();
+
+    if (trimmedCat) {
+      if (!distinctCategories.some(c => c.toLowerCase() === trimmedCat.toLowerCase())) {
+        setCustomCategories([...customCategories, trimmedCat]);
+      }
     }
+
+    if (trimmedSub) {
+      if (!customSubcategories.some(s => s.toLowerCase() === trimmedSub.toLowerCase())) {
+        setCustomSubcategories([...customSubcategories, trimmedSub]);
+      }
+    }
+
+    setNewCategoryName('');
+    setNewSubcategoryName('');
+    setIsCategoryModalOpen(false);
   };
 
   const handleUpdateStock = (id: number, delta: number) => {

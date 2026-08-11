@@ -9,6 +9,7 @@ interface SharedPantryData {
   inventory: any[];
   history: any[];
   categories: string[];
+  subcategories: string[];
   lastUpdated: string;
 }
 
@@ -23,6 +24,7 @@ let inMemoryPantryData: SharedPantryData = {
   inventory: INVENTORY,
   history: HISTORY_ITEMS,
   categories: ['Despensa', 'Limpeza', 'Higiene'],
+  subcategories: [],
   lastUpdated: new Date().toISOString(),
 };
 
@@ -63,6 +65,7 @@ async function getCloudData(): Promise<SharedPantryData> {
         inventory: deduplicateList(Array.isArray(cloudData.inventory) ? cloudData.inventory : []),
         history: deduplicateList(Array.isArray(cloudData.history) ? cloudData.history : []),
         categories: deduplicateList(Array.isArray(cloudData.categories) ? cloudData.categories : ['Despensa', 'Limpeza', 'Higiene']),
+        subcategories: deduplicateList(Array.isArray(cloudData.subcategories) ? cloudData.subcategories : []),
         lastUpdated: data.updated_at || cloudData.lastUpdated || new Date().toISOString(),
       };
       inMemoryPantryData = result;
@@ -121,6 +124,7 @@ export async function POST(req: NextRequest) {
       inventory: body.inventory !== undefined && Array.isArray(body.inventory) ? deduplicateList(body.inventory) : current.inventory,
       history: body.history !== undefined && Array.isArray(body.history) ? deduplicateList(body.history) : current.history,
       categories: body.categories !== undefined && Array.isArray(body.categories) ? deduplicateList(body.categories) : current.categories,
+      subcategories: body.subcategories !== undefined && Array.isArray(body.subcategories) ? deduplicateList(body.subcategories) : current.subcategories,
       lastUpdated: new Date().toISOString(),
     };
 

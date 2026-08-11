@@ -7,6 +7,7 @@ export interface SharedData {
   inventory: any[];
   history: any[];
   categories: string[];
+  subcategories: string[];
 }
 
 export function deduplicateInventory(items: any[]): any[] {
@@ -46,9 +47,25 @@ export function deduplicateCategories(cats: any[]): string[] {
   return distinct.length > 0 ? distinct : ['Despensa', 'Limpeza', 'Higiene'];
 }
 
+export function deduplicateSubcategories(subs: any[]): string[] {
+  if (!Array.isArray(subs)) return [];
+  const distinct: string[] = [];
+  const seen = new Set<string>();
+  for (const sub of subs) {
+    if (!sub) continue;
+    const trimmed = String(sub).trim();
+    const lower = trimmed.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      distinct.push(trimmed);
+    }
+  }
+  return distinct;
+}
+
 export function getInitialSharedData(): SharedData {
   if (typeof window === 'undefined') {
-    return { profiles: [], inventory: [], history: [], categories: [] };
+    return { profiles: [], inventory: [], history: [], categories: [], subcategories: [] };
   }
 
   const getStored = (key: string, fallback: any) => {
@@ -65,6 +82,7 @@ export function getInitialSharedData(): SharedData {
     inventory: deduplicateInventory(getStored('virtual_pantry_inventory', [])),
     history: getStored('virtual_pantry_history', []),
     categories: deduplicateCategories(getStored('virtual_pantry_categories', ['Despensa', 'Limpeza', 'Higiene'])),
+    subcategories: deduplicateSubcategories(getStored('virtual_pantry_subcategories', [])),
   };
 }
 
@@ -105,6 +123,14 @@ function applyDataToLocalStorage(data: Partial<SharedData>): boolean {
         hasDiff = true;
       }
     }
+    if (Array.isArray(data.subcategories)) {
+      const cleanSubs = deduplicateSubcategories(data.subcategories);
+      const str = JSON.stringify(cleanSubs);
+      if (localStorage.getItem('virtual_pantry_subcategories') !== str) {
+        localStorage.setItem('virtual_pantry_subcategories', str);
+        hasDiff = true;
+      }
+    }
   } catch (err) {
     console.warn('[Sync] Local storage write warning:', err);
   }
@@ -119,6 +145,7 @@ export async function saveSharedData(partialData: Partial<SharedData>) {
     ...partialData,
     inventory: partialData.inventory ? deduplicateInventory(partialData.inventory) : undefined,
     categories: partialData.categories ? deduplicateCategories(partialData.categories) : undefined,
+    subcategories: partialData.subcategories ? deduplicateSubcategories(partialData.subcategories) : undefined,
   };
 
   applyDataToLocalStorage(sanitizedData);

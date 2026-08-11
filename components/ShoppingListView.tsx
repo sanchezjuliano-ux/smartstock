@@ -52,6 +52,17 @@ export default function ShoppingListView() {
     }
     return [];
   });
+  const [customSubcategories, setCustomSubcategories] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('virtual_pantry_subcategories');
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (e) {}
+      }
+    }
+    return [];
+  });
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
   
   // Advanced Filters
@@ -98,6 +109,14 @@ export default function ShoppingListView() {
     });
   };
 
+  const handleSetCustomSubcategories = (newSubOrFn: any) => {
+    setCustomSubcategories((prev) => {
+      const next = typeof newSubOrFn === 'function' ? newSubOrFn(prev) : newSubOrFn;
+      saveSharedData({ subcategories: next });
+      return next;
+    });
+  };
+
   const handleSetHistoryItems = (newHistOrFn: any) => {
     setHistoryItems((prev) => {
       const next = typeof newHistOrFn === 'function' ? newHistOrFn(prev) : newHistOrFn;
@@ -114,6 +133,9 @@ export default function ShoppingListView() {
       }
       if (data.categories !== undefined && Array.isArray(data.categories)) {
         setCustomCategories(data.categories);
+      }
+      if (data.subcategories !== undefined && Array.isArray(data.subcategories)) {
+        setCustomSubcategories(data.subcategories);
       }
       if (data.history !== undefined && Array.isArray(data.history)) {
         setHistoryItems(data.history);
@@ -360,6 +382,8 @@ export default function ShoppingListView() {
               setShowLowStockOnly={setShowLowStockOnly}
               customCategories={customCategories}
               setCustomCategories={handleSetCustomCategories}
+              customSubcategories={customSubcategories}
+              setCustomSubcategories={handleSetCustomSubcategories}
               selectedCategoryFilter={selectedCategoryFilter}
               setIsModalOpen={setIsModalOpen}
               setModalMode={setModalMode}
@@ -386,6 +410,8 @@ export default function ShoppingListView() {
               user={user}
               customCategories={customCategories}
               setCustomCategories={handleSetCustomCategories}
+              customSubcategories={customSubcategories}
+              setCustomSubcategories={handleSetCustomSubcategories}
             />
           ) : (
             <HistoryChatView 
@@ -430,8 +456,6 @@ export default function ShoppingListView() {
         </div>
       </div>
 
-
-
       <AddItemModal 
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingItem(null); setSelectedFile(null); }}
@@ -444,6 +468,8 @@ export default function ShoppingListView() {
         editingItem={editingItem}
         customCategories={customCategories}
         setCustomCategories={handleSetCustomCategories}
+        customSubcategories={customSubcategories}
+        setCustomSubcategories={handleSetCustomSubcategories}
         user={user}
       />
     </div>
